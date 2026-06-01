@@ -1,0 +1,611 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Database from 'better-sqlite3';
+import path from 'path';
+
+export async function getStaticPaths() {
+  const dbPath = path.join(process.cwd(), 'skincare.db');
+  const db = new Database(dbPath);
+  const rows = db.prepare("SELECT slug FROM products").all();
+  db.close();
+  return rows.map(r => ({ params: { slug: r.slug } }));
+}
+
+const { slug } = Astro.params;
+
+const dbPath = path.join(process.cwd(), 'skincare.db');
+const db = new Database(dbPath);
+
+// Fetch product
+const product = db.prepare("SELECT * FROM products WHERE slug = ?").get(slug);
+
+if (!product) {
+  throw new Error(`Product not found for slug: ${slug}`);
+}
+
+// Fetch top reviews
+const rawReviews = db.prepare("SELECT * FROM reviews WHERE product_id = ?").all(product.product_id);
+
+// Fetch 4 similar products in the same secondary category for Pillar 2 horizontal PageRank maillage
+const similarProducts = db.prepare(`
+  SELECT product_name, brand_name, slug, rating, price_usd, loves_count, primary_category 
+  FROM products 
+  WHERE secondary_category = ? AND product_id != ? 
+  ORDER BY loves_count DESC 
+  LIMIT 4
+`).all(product.secondary_category, product.product_id);
+
+db.close();
+
+// Robust slugify helper for ingredient and brand entity links (Pillar 2)
+const slugify = (text) => {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[-\s]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+// Heuristic fallback to detect skin type from text if empty in DB
+function detectSkinType(text, title) {
+  const content = ((title || "") + " " + (text || "")).toLowerCase();
+  
+  if (content.includes("combination skin") || content.includes("peau mixte") || content.includes("peau-mixte")) {
+    return "combination";
+  }
+  if (content.includes("oily skin") || content.includes("peau grasse") || content.includes("exces de sebum") || content.includes("excès de sébum")) {
+    return "oily";
+  }
+  if (content.includes("dry skin") || content.includes("peau seche") || content.includes("peau sèche") || content.includes("déshydratée") || content.includes("deshydratee")) {
+    return "dry";
+  }
+  if (content.includes("normal skin") || content.includes("peau normale")) {
+    return "normal";
+  }
+  return null;
+}
+
+const reviews = rawReviews.map(rev => {
+  if (!rev.skin_type || rev.skin_type.trim() === "") {
+    const detected = detectSkinType(rev.review_text, rev.review_title);
+    if (detected) {
+      return { ...rev, skin_type: detected };
+    }
+  }
+  return rev;
+});
+
+// Process highlights: parse stringified python lists e.g. "['Clean at Sephora', 'Good for: Dryness']"
+let highlightsList = [];
+if (product.highlights) {
+  try {
+    const cleaned = product.highlights.replace("['", "").replace("']", "").replace("', '", "; ").replace('", "', '; ').replace('["', '').replace('"]', '');
+    highlightsList = cleaned.split("; ").filter(h => h.trim());
+  } catch (e) {
+    highlightsList = [product.highlights];
+  }
+}
+
+// Parse active ingredients
+const activeIngredientsList = product.active_ingredients ? product.active_ingredients.split(', ') : [];
+
+// Set to true once affiliate links are active (hides price and purchase buttons for now)
+import { SHOW_PRICES, ENABLE_AFFILIATION } from '../../config.js';
+
+// Common ingredients dictionaries for premium mapping
+const INGREDIENTS_DICTIONARY = {
+  "water": { role: "Solvant (base hydratante)", risk: "Très sûr" },
+  "aqua": { role: "Solvant (base hydratante)", risk: "Très sûr" },
+  "glycerin": { role: "Humectant (capte et retient l'hydratation)", risk: "Très sûr" },
+  "titanium dioxide": { role: "Filtre UV minéral / Opacifiant", risk: "Très sûr" },
+  "butylene glycol": { role: "Humectant / Fluidifiant de texture", risk: "Très sûr" },
+  "propylene glycol": { role: "Humectant / Aide à la pénétration des actifs", risk: "Sûr" },
+  "silica": { role: "Absorbant de sébum / Matifiant", risk: "Très sûr" },
+  "glycolic acid": { role: "Exfoliant puissant AHA (éclat, renouvellement)", risk: "Sûr (sensibilité UV)" },
+  "lactic acid": { role: "Exfoliant AHA très doux / Hydratant", risk: "Sûr (sensibilité UV)" },
+  "salicylic acid": { role: "Exfoliant BHA (anti-acné, désincruste les pores)", risk: "Sûr" },
+  "niacinamide": { role: "Vitamine B3 (anti-taches, resserre les pores)", risk: "Très sûr" },
+  "retinol": { role: "Actif anti-âge d'exception (renouveau cellulaire)", risk: "À surveiller (irritant au début)" },
+  "tocopherol": { role: "Vitamine E (antioxydant protecteur naturel)", risk: "Très sûr" },
+  "sodium hyaluronate": { role: "Humectant surpuissant (repulpe la peau)", risk: "Très sûr" },
+  "hyaluronic acid": { role: "Humectant surpuissant (repulpe la peau)", risk: "Très sûr" },
+  "squalane": { role: "Émollient biomimétique protecteur non comédogène", risk: "Très sûr" },
+  "xanthan gum": { role: "Gélifiant naturel / Agent de texture", risk: "Très sûr" },
+  "phenoxyethanol": { role: "Conservateur doux réglementé", risk: "Sûr" },
+  "fragrance": { role: "Parfum olfactif", risk: "À surveiller (allergène)" },
+  "parfum": { role: "Parfum olfactif", risk: "À surveiller (allergène)" },
+  "limonene": { role: "Composant aromatique naturel", risk: "À surveiller (allergène)" },
+  "linalool": { role: "Composant aromatique naturel", risk: "À surveiller (allergène)" },
+  "alcohol denat": { role: "Solvant d'actifs / Texture légère séchante", risk: "À surveiller (asséchant)" },
+  "ceramide np": { role: "Céramide (renforce et répare la barrière cutanée)", risk: "Très sûr" },
+  "ceramide ap": { role: "Céramide (renforce et répare la barrière cutanée)", risk: "Très sûr" },
+  "ceramide eop": { role: "Céramide (renforce et répare la barrière cutanée)", risk: "Très sûr" },
+  "centella asiatica extract": { role: "Extrait de Centella (anti-inflammatoire et réparateur)", risk: "Très sûr" },
+  "panthenol": { role: "Pro-vitamine B5 (apaisant réparateur intense)", risk: "Très sûr" },
+  "allantoin": { role: "Agent apaisant, cicatrisant et anti-irritations", risk: "Très sûr" }
+};
+
+// Parse ingredients
+const rawIngredients = product.ingredients || "";
+const parsedIngredients = rawIngredients
+  .split(",")
+  .map(i => {
+    const name = i.trim().replace(/[\[\]']/g, ""); // clean python list leftovers
+    if (!name) return null;
+    
+    const lowerName = name.toLowerCase();
+    let found = null;
+    for (const [key, val] of Object.entries(INGREDIENTS_DICTIONARY)) {
+      if (lowerName.includes(key)) {
+        found = { name, ...val };
+        break;
+      }
+    }
+    
+    if (!found) {
+      found = { 
+        name, 
+        role: "Agent de texture / Émollient / Hydratant", 
+        risk: "Sûr"
+      };
+    }
+    return found;
+  })
+  .filter(Boolean);
+
+// Dynamic JSON-LD Product Schema for search engine rich snippets
+const ogImageURL = new URL('/images/og-image.jpg', 'https://123maquillage.com').toString();
+const productSchema = {
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": product.product_name,
+  "image": ogImageURL,
+  "description": `Statistiques réelles de compatibilité par type de peau et avis consommateurs pour ${product.product_name} de la marque ${product.brand_name}.`,
+  "brand": {
+    "@type": "Brand",
+    "name": product.brand_name
+  },
+  "category": `${product.primary_category} > ${product.secondary_category}`,
+  "aggregateRating": product.rating ? {
+    "@type": "AggregateRating",
+    "ratingValue": product.rating,
+    "reviewCount": reviews.length || 1,
+    "bestRating": "5",
+    "worstRating": "1"
+  } : undefined
+};
+
+// Meticulous BreadcrumbList Schema for rich search snippet navigation (Pillar 2)
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "https://123maquillage.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": product.brand_name,
+      "item": `https://123maquillage.com/marques/${slugify(product.brand_name)}`
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": product.product_name,
+      "item": `https://123maquillage.com/produits/${product.slug}`
+    }
+  ]
+};
+---
+
+<Layout 
+  title={`${product.product_name} par ${product.brand_name} - 123Maquillage`}
+  description={`Découvrez les statistiques de compatibilité et les avis par type de peau pour ${product.product_name} de la marque ${product.brand_name}.`}
+  schema={[productSchema, breadcrumbSchema]}
+>
+  <div style="padding: 60px 0 100px 0;">
+    <div class="container">
+      
+      <!-- Breadcrumbs & Back Link System (Pillar 2) -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 40px; border-bottom: 1px dashed rgba(212, 175, 55, 0.08); padding-bottom: 24px;">
+        <a href="/" style="display: inline-flex; align-items: center; gap: 8px; color: hsl(var(--text-muted)); font-weight: 500; font-size: 0.95rem; transition: var(--transition-fast);" class="back-link">
+          <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour aux soins
+        </a>
+
+        <nav class="breadcrumbs animate-fade-in" aria-label="Fil d'Ariane" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: hsl(var(--text-muted)); font-weight: 500;">
+          <a href="/" class="back-link" style="color: inherit;">Accueil</a>
+          <span style="opacity: 0.5;">/</span>
+          <a href={`/marques/${slugify(product.brand_name)}`} class="back-link" style="color: inherit;">{product.brand_name}</a>
+          <span style="opacity: 0.5;">/</span>
+          <span style="color: hsl(var(--text-dark)); font-weight: 600;">{product.product_name}</span>
+        </nav>
+      </div>
+
+      <!-- Product Main Info Block -->
+      <div class="grid-cols-2" style="margin-bottom: 80px; align-items: flex-start;">
+        
+        <!-- Left Column: Premium details container -->
+        <div class="animate-fade-in" style="background: linear-gradient(135deg, hsl(var(--bg-secondary)) 0%, rgba(222, 158, 142, 0.08) 100%); border-radius: var(--radius-lg); border: 1px solid rgba(212, 175, 55, 0.12); padding: 48px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; min-height: 460px;">
+          <div>
+            <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 8px;">
+              {product.primary_category} · {product.secondary_category}
+            </span>
+            <h1 class="editorial-title" style="font-size: 2.8rem; margin-bottom: 12px; line-height: 1.2;">
+              {product.product_name}
+            </h1>
+            <p style="font-size: 1.2rem; color: hsl(var(--text-muted)); margin-bottom: 24px;">
+              par <a href={`/marques/${slugify(product.brand_name)}`} style="color: hsl(var(--text-dark)); font-weight: 600; text-decoration: underline;">{product.brand_name}</a>
+            </p>
+
+            <!-- Highlights badges -->
+            {highlightsList.length > 0 && (
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px;">
+                {highlightsList.map(h => (
+                  <span style="font-size: 0.75rem; background-color: white; border: 1px solid rgba(212, 175, 55, 0.15); color: hsl(var(--text-dark)); padding: 4px 12px; border-radius: 20px; font-weight: 500;">
+                    {h}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {ENABLE_AFFILIATION && (
+            <div style="border-top: 1px solid rgba(212, 175, 55, 0.15); padding-top: 30px; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); text-transform: uppercase; display: block;">Prix de référence</span>
+                <strong style="font-size: 2rem; color: hsl(var(--text-dark)); font-weight: 600;">
+                  {product.price_usd > 0 ? `${product.price_usd.toFixed(0)} €` : 'Non renseigné'}
+                </strong>
+                {product.size && <span style="font-size: 0.85rem; color: hsl(var(--text-muted)); display: block;">Format : {product.size}</span>}
+              </div>
+              
+              <button class="btn btn-primary" style="padding: 16px 36px; font-size: 1rem;">
+                Rechercher sur Sephora
+              </button>
+            </div>
+          )}
+        </div>
+
+        <!-- Right Column: Interactive Skin Compatibility Chart -->
+        <div class="animate-fade-in delay-1">
+          <div class="premium-card" style="padding: 40px;">
+            <h2 class="editorial-title" style="font-size: 1.8rem; margin-bottom: 12px;">
+              Compatibilité par <span class="editorial-italic text-rose">Type de Peau</span>
+            </h2>
+            <p style="color: hsl(var(--text-muted)); font-size: 0.95rem; margin-bottom: 32px;">
+              Statistiques exclusives calculées en agrégeant les avis de consommateurs.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+              
+              <!-- Dry skin compatibility -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="skin-badge dry" style="font-weight: 600;">Peau Sèche</span>
+                  <span style="font-weight: 600; font-size: 1.05rem;">
+                    {product.rating_dry ? `★ ${product.rating_dry.toFixed(2)}/5` : 'Non répertoriée'}
+                    {product.recommend_dry ? ` · ${product.recommend_dry}% rec.` : ''}
+                  </span>
+                </div>
+                <div style="height: 8px; width: 100%; background-color: rgba(28,24,23,0.05); border-radius: 4px; overflow: hidden;">
+                  <div style={`height: 100%; width: ${product.rating_dry ? (product.rating_dry / 5 * 100) : 0}%; background: linear-gradient(90deg, #0ea5e9, #38bdf8); border-radius: 4px;`}></div>
+                </div>
+              </div>
+
+              <!-- Oily skin compatibility -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="skin-badge oily" style="font-weight: 600;">Peau Grasse</span>
+                  <span style="font-weight: 600; font-size: 1.05rem;">
+                    {product.rating_oily ? `★ ${product.rating_oily.toFixed(2)}/5` : 'Non répertoriée'}
+                    {product.recommend_oily ? ` · ${product.recommend_oily}% rec.` : ''}
+                  </span>
+                </div>
+                <div style="height: 8px; width: 100%; background-color: rgba(28,24,23,0.05); border-radius: 4px; overflow: hidden;">
+                  <div style={`height: 100%; width: ${product.rating_oily ? (product.rating_oily / 5 * 100) : 0}%; background: linear-gradient(90deg, #16a34a, #4ade80); border-radius: 4px;`}></div>
+                </div>
+              </div>
+
+              <!-- Combination skin compatibility -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="skin-badge combination" style="font-weight: 600;">Peau Mixte</span>
+                  <span style="font-weight: 600; font-size: 1.05rem;">
+                    {product.rating_combination ? `★ ${product.rating_combination.toFixed(2)}/5` : 'Non répertoriée'}
+                    {product.recommend_combination ? ` · ${product.recommend_combination}% rec.` : ''}
+                  </span>
+                </div>
+                <div style="height: 8px; width: 100%; background-color: rgba(28,24,23,0.05); border-radius: 4px; overflow: hidden;">
+                  <div style={`height: 100%; width: ${product.rating_combination ? (product.rating_combination / 5 * 100) : 0}%; background: linear-gradient(90deg, #9333ea, #c084fc); border-radius: 4px;`}></div>
+                </div>
+              </div>
+
+              <!-- Normal skin compatibility -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="skin-badge normal" style="font-weight: 600;">Peau Normale</span>
+                  <span style="font-weight: 600; font-size: 1.05rem;">
+                    {product.rating_normal ? `★ ${product.rating_normal.toFixed(2)}/5` : 'Non répertoriée'}
+                    {product.recommend_normal ? ` · ${product.recommend_normal}% rec.` : ''}
+                  </span>
+                </div>
+                <div style="height: 8px; width: 100%; background-color: rgba(28,24,23,0.05); border-radius: 4px; overflow: hidden;">
+                  <div style={`height: 100%; width: ${product.rating_normal ? (product.rating_normal / 5 * 100) : 0}%; background: linear-gradient(90deg, #ea580c, #ffedd5); border-radius: 4px;`}></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section: Ingredients List -->
+      <section style="margin-bottom: 80px;">
+        <div class="premium-card" style="padding: 48px;">
+          <h2 class="editorial-title" style="font-size: 2rem; margin-bottom: 24px;">
+            Analyse de la <span class="editorial-italic text-gold">Composition</span>
+          </h2>
+          
+          {activeIngredientsList.length > 0 && (
+            <div style="margin-bottom: 30px; padding: 24px; background-color: rgba(222, 158, 142, 0.05); border-radius: var(--radius-md); border-left: 4px solid hsl(var(--accent-rose));">
+              <h4 class="editorial-title" style="font-size: 1.1rem; color: hsl(var(--text-dark)); margin-bottom: 12px; font-weight: 600;">
+                Ingrédients Actifs Repérés :
+              </h4>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                {activeIngredientsList.map(act => (
+                  <a href={`/ingredients/${slugify(act)}`} style="font-size: 0.8rem; background-color: white; border: 1px solid rgba(212,175,55,0.25); color: hsl(var(--accent-gold)); padding: 4px 14px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: var(--transition-fast);" class="ing-badge">
+                    {act.charAt(0).toUpperCase() + act.slice(1)}
+                    <svg style="width: 12px; height: 12px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {parsedIngredients.length > 0 ? (
+            <>
+              <div style="overflow-x: auto; border: 1px solid rgba(212, 175, 55, 0.12); border-radius: var(--radius-md); background: white; margin-top: 24px; box-shadow: var(--shadow-sm);">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+                  <thead>
+                    <tr style="background-color: rgba(222, 158, 142, 0.04); border-bottom: 1px solid rgba(212, 175, 55, 0.12);">
+                      <th style="padding: 16px 24px; font-family: var(--font-serif); font-weight: 600; width: 35%;">Ingrédient</th>
+                      <th style="padding: 16px 24px; font-family: var(--font-serif); font-weight: 600; width: 45%;">Rôle & Bénéfices</th>
+                      <th style="padding: 16px 24px; font-family: var(--font-serif); font-weight: 600; text-align: right; width: 20%;">Tolérance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedIngredients.map((ing, idx) => (
+                      <tr 
+                        style="border-bottom: 1px solid rgba(212, 175, 55, 0.05); transition: var(--transition-fast);" 
+                        class={`table-row ${idx >= 8 ? 'ingredient-hidden' : ''}`}
+                      >
+                        <td style="padding: 14px 24px; font-weight: 500; color: hsl(var(--text-dark));">
+                          {ing.name}
+                        </td>
+                        <td style="padding: 14px 24px; color: hsl(var(--text-muted)); font-size: 0.9rem;">
+                          {ing.role}
+                        </td>
+                        <td style="padding: 14px 24px; text-align: right;">
+                          <span class={`risk-badge ${ing.risk.toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[()]/g, '')}`}>
+                            {ing.risk}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {parsedIngredients.length > 8 && (
+                <div style="text-align: center; margin-top: 24px;">
+                  <button id="toggle-ingredients" class="btn btn-secondary" style="padding: 10px 24px; font-size: 0.85rem; border-radius: var(--radius-sm);">
+                    Afficher la liste complète ({parsedIngredients.length} ingrédients)
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p style="font-size: 0.98rem; color: hsl(var(--text-muted));">Liste complète d'ingrédients non disponible.</p>
+          )}
+
+          <script is:inline>
+            const toggleBtn = document.getElementById('toggle-ingredients');
+            if (toggleBtn) {
+              toggleBtn.addEventListener('click', () => {
+                document.querySelectorAll('.ingredient-hidden').forEach(el => {
+                  el.classList.remove('ingredient-hidden');
+                });
+                toggleBtn.style.display = 'none';
+              });
+            }
+          </script>
+        </div>
+      </section>
+
+      <!-- Section: Customer Reviews -->
+      <section>
+        <div style="margin-bottom: 40px;">
+          <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 8px;">
+            Avis de Consommateurs
+          </span>
+          <h2 class="editorial-title" style="font-size: 2.2rem;">
+            Témoignages les <span class="editorial-italic text-gold">plus utiles</span>
+          </h2>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          {reviews.length > 0 ? (
+            reviews.map(rev => (
+              <div class="premium-card" style="padding: 32px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 16px;">
+                  <div>
+                    {rev.skin_type ? (
+                      <span class={`skin-badge ${rev.skin_type}`} style="margin-right: 12px; font-weight: 600;">
+                        Peau {rev.skin_type === 'dry' ? 'Sèche' : rev.skin_type === 'oily' ? 'Grasse' : rev.skin_type === 'combination' ? 'Mixte' : 'Normale'}
+                      </span>
+                    ) : (
+                      <span class="skin-badge" style="background-color: rgba(28, 24, 23, 0.05); color: hsl(var(--text-muted)); margin-right: 12px; font-weight: 600;">
+                        Peau: Non précisé
+                      </span>
+                    )}
+                    {rev.skin_tone && <span style="font-size: 0.85rem; color: hsl(var(--text-muted));">Teint: {rev.skin_tone}</span>}
+                  </div>
+                  
+                  <div style="text-align: right;">
+                    <div style="color: hsl(var(--accent-gold)); font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">
+                      {"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}
+                    </div>
+                    {rev.is_recommended === 1 && (
+                      <span style="font-size: 0.8rem; background-color: rgba(22, 163, 74, 0.08); color: #16a34a; padding: 2px 8px; border-radius: 4px; font-weight: 500;">
+                        Recommande ce produit
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {rev.review_title && (
+                  <h3 class="editorial-title" style="font-size: 1.25rem; margin-bottom: 12px; font-weight: 600;">
+                    « {rev.review_title} »
+                  </h3>
+                )}
+                
+                <p style="font-size: 0.98rem; line-height: 1.7; color: hsl(var(--text-dark));">
+                  {rev.review_text}
+                </p>
+                
+                {rev.pos_feedback > 0 && (
+                  <div style="margin-top: 16px; font-size: 0.8rem; color: hsl(var(--text-muted)); font-weight: 500;">
+                    {rev.pos_feedback} personnes ont trouvé cet avis utile.
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div class="premium-card" style="text-align: center; padding: 48px;">
+              <p style="color: hsl(var(--text-muted));">Aucun avis complet n'a été importé pour ce produit pour le moment.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <!-- Section: Similar Products (Pillar 2 Horizontal Maillage) -->
+      {similarProducts.length > 0 && (
+        <section style="margin-top: 80px; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 60px;">
+          <div style="margin-bottom: 40px;">
+            <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 8px;">
+              Recommandations Similaires
+            </span>
+            <h2 class="editorial-title" style="font-size: 2.2rem;">
+              Soins de la même <span class="editorial-italic text-gold">catégorie</span>
+            </h2>
+          </div>
+
+          <div class="grid-cols-4">
+            {similarProducts.map(p => (
+              <div class="premium-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 360px;">
+                <div>
+                  <span style="font-size: 0.75rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
+                    {p.primary_category}
+                  </span>
+                  <h3 class="editorial-title" style="font-size: 1.25rem; margin-bottom: 8px; line-height: 1.3; font-weight: 500;">
+                    <a href={`/produits/${p.slug}`} style="color: inherit;">{p.product_name}</a>
+                  </h3>
+                  <p style="font-size: 0.85rem; color: hsl(var(--text-muted)); margin-bottom: 12px;">
+                    par <strong>{p.brand_name}</strong>
+                  </p>
+                </div>
+                
+                <div>
+                  <!-- Rating and loves -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 4px; font-weight: 500; font-size: 0.9rem; color: hsl(var(--accent-gold));">
+                      <span>★</span>
+                      <span>{p.rating.toFixed(1)}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 4px;">
+                      <span>♥</span>
+                      <span>{p.loves_count.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(212, 175, 55, 0.08); padding-top: 16px;">
+                    {SHOW_PRICES && (
+                      <span style="font-weight: 600; font-size: 1.1rem; color: hsl(var(--text-dark));">
+                        {p.price_usd > 0 ? `${p.price_usd.toFixed(0)} €` : 'Non renseigné'}
+                      </span>
+                    )}
+                    <a href={`/produits/${p.slug}`} class="btn btn-primary" style={`padding: 8px 16px; font-size: 0.8rem; border-radius: var(--radius-sm); ${!SHOW_PRICES ? 'margin-left: auto;' : ''}`}>
+                      Détails
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .back-link:hover {
+    color: hsl(var(--accent-rose)) !important;
+    padding-left: 4px;
+  }
+  
+  .ing-badge:hover {
+    background-color: hsl(var(--accent-rose)) !important;
+    border-color: hsl(var(--accent-rose)) !important;
+    color: white !important;
+    transform: translateY(-2px);
+  }
+
+  .ingredient-hidden {
+    display: none;
+  }
+
+  .table-row:hover {
+    background-color: rgba(222, 158, 142, 0.02);
+  }
+
+  /* Risk/Tolerance custom badge styles */
+  .risk-badge {
+    display: inline-flex;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .risk-badge.tres-sur {
+    background-color: rgba(22, 163, 74, 0.08);
+    color: #16a34a;
+  }
+  .risk-badge.sur {
+    background-color: rgba(14, 165, 233, 0.08);
+    color: #0284c7;
+  }
+  .risk-badge.a-surveiller-allergene,
+  .risk-badge.a-surveiller-irritant-au-debut,
+  .risk-badge.a-surveiller-asséchant {
+    background-color: rgba(234, 88, 12, 0.08);
+    color: #ea580c;
+  }
+</style>

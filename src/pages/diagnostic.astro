@@ -1,0 +1,469 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import Database from 'better-sqlite3';
+import path from 'path';
+import { SHOW_PRICES } from '../config.js';
+const url = new URL(Astro.url);
+const skin = url.searchParams.get('skin') || '';
+const concern = url.searchParams.get('concern') || '';
+const maxPrice = parseFloat(url.searchParams.get('price') || '1000');
+
+console.log("SERVER SIDE - Astro.url:", Astro.url.toString());
+console.log("SERVER SIDE - skin:", skin, "concern:", concern, "maxPrice:", maxPrice);
+
+let recommendations = [];
+let hasSubmitted = false;
+
+if (skin && concern) {
+  hasSubmitted = true;
+  
+  const dbPath = path.join(process.cwd(), 'skincare.db');
+  const db = new Database(dbPath);
+
+  // Map user skin type to database columns
+  let ratingCol = 'rating';
+  let recommendCol = 'rating';
+  let countCol = 'reviews_count';
+  
+  if (skin === 'dry') {
+    ratingCol = 'rating_dry';
+    countCol = 'reviews_dry_count';
+  } else if (skin === 'oily') {
+    ratingCol = 'rating_oily';
+    countCol = 'reviews_oily_count';
+  } else if (skin === 'combination') {
+    ratingCol = 'rating_combination';
+    countCol = 'reviews_combination_count';
+  } else if (skin === 'normal') {
+    ratingCol = 'rating_normal';
+    countCol = 'reviews_normal_count';
+  }
+
+  // Concern semantic mappings
+  let concernFilter = "1=1";
+  if (concern === 'dryness') {
+    concernFilter = "(highlights LIKE '%Hydrating%' OR highlights LIKE '%Dryness%' OR secondary_category = 'Moisturizers')";
+  } else if (concern === 'anti-aging') {
+    concernFilter = "(highlights LIKE '%Anti-Aging%' OR highlights LIKE '%Fine Lines%' OR highlights LIKE '%Wrinkles%')";
+  } else if (concern === 'acne') {
+    concernFilter = "(highlights LIKE '%Acne%' OR highlights LIKE '%Pores%' OR highlights LIKE '%Blemishes%' OR highlights LIKE '%Oil%')";
+  } else if (concern === 'redness') {
+    concernFilter = "(highlights LIKE '%Redness%' OR highlights LIKE '%Soothing%' OR highlights LIKE '%Calming%')";
+  } else if (concern === 'dullness') {
+    concernFilter = "(highlights LIKE '%Dullness%' OR highlights LIKE '%Uneven Texture%' OR highlights LIKE '%Brightening%')";
+  }
+
+  // Query database for best matching products
+  const query = `
+    SELECT product_name, brand_name, slug, rating, price_usd, primary_category, highlights, active_ingredients,
+           ${ratingCol} as skin_rating, ${countCol} as skin_count
+    FROM products
+    WHERE ${ratingCol} IS NOT NULL 
+      AND ${ratingCol} >= 4.0
+      AND price_usd <= ?
+      AND ${concernFilter}
+    ORDER BY ${ratingCol} DESC, loves_count DESC
+    LIMIT 3
+  `;
+
+  try {
+    recommendations = db.prepare(query).all(maxPrice);
+  } catch (err) {
+    console.error("SQL Recommendation error:", err);
+  }
+  
+  db.close();
+}
+---
+
+<Layout title="Diagnostic de Peau Intelligent - 123Maquillage">
+  <div style="padding: 60px 0 100px 0;">
+    <div class="container" style="max-width: 800px;">
+      
+      {!hasSubmitted ? (
+        /* QUIZ STEPS */
+        <div class="premium-card animate-fade-in" style="padding: 48px;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; color: hsl(var(--accent-rose)); text-transform: uppercase;">
+              Sélecteur de Routine Sur-Mesure
+            </span>
+            <h1 class="editorial-title" style="font-size: 2.4rem; margin-top: 12px; margin-bottom: 16px;">
+              Votre Diagnostic de Peau <span class="editorial-italic text-gold">Gratuit</span>
+            </h1>
+            <p style="color: hsl(var(--text-muted)); font-size: 1rem; max-width: 500px; margin: 0 auto;">
+              Répondez à ces 3 questions rapides pour trouver la routine idéale validée par des milliers d'utilisateurs.
+            </p>
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="display: flex; gap: 8px; margin-bottom: 40px;" id="progress-bar">
+            <div style="height: 4px; flex: 1; background-color: hsl(var(--accent-rose)); border-radius: 2px; transition: var(--transition-fast);" class="progress-step" data-step="1"></div>
+            <div style="height: 4px; flex: 1; background-color: rgba(28,24,23,0.08); border-radius: 2px; transition: var(--transition-fast);" class="progress-step" data-step="2"></div>
+            <div style="height: 4px; flex: 1; background-color: rgba(28,24,23,0.08); border-radius: 2px; transition: var(--transition-fast);" class="progress-step" data-step="3"></div>
+          </div>
+
+          <form id="diagnostic-form" action="/diagnostic" method="GET">
+            
+            <!-- STEP 1: Skin Type -->
+            <div class="quiz-step-container active" data-step="1">
+              <h3 class="editorial-title" style="font-size: 1.4rem; margin-bottom: 24px; text-align: center;">1. Quel est votre type de peau ?</h3>
+              <div class="grid-cols-2" style="gap: 16px;">
+                <label class="option-card">
+                  <input type="radio" name="skin" value="dry" required />
+                  <span class="option-title">Peau Sèche</span>
+                  <span class="option-desc">Tiraillements, desquamation, inconfort ou rougeurs.</span>
+                </label>
+                <label class="option-card">
+                  <input type="radio" name="skin" value="oily" />
+                  <span class="option-title">Peau Grasse</span>
+                  <span class="option-desc">Brillance, pores dilatés et imperfections fréquentes.</span>
+                </label>
+                <label class="option-card">
+                  <input type="radio" name="skin" value="combination" />
+                  <span class="option-title">Peau Mixte</span>
+                  <span class="option-desc">Brillance sur la zone T (front, nez, menton) et joues sèches.</span>
+                </label>
+                <label class="option-card">
+                  <input type="radio" name="skin" value="normal" />
+                  <span class="option-title">Peau Normale</span>
+                  <span class="option-desc">Équilibrée, sans inconfort ni brillance majeure.</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- STEP 2: Concern -->
+            <div class="quiz-step-container" data-step="2">
+              <h3 class="editorial-title" style="font-size: 1.4rem; margin-bottom: 24px; text-align: center;">2. Quel est votre objectif principal ?</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="option-card horizontal">
+                  <input type="radio" name="concern" value="dryness" required />
+                  <div style="display: flex; flex-direction: column;">
+                    <span class="option-title">Hydratation & Apaisement</span>
+                    <span class="option-desc">Nourrir en profondeur et redonner de la souplesse.</span>
+                  </div>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="concern" value="anti-aging" />
+                  <div style="display: flex; flex-direction: column;">
+                    <span class="option-title">Anti-Âge & Rides</span>
+                    <span class="option-desc">Raffermir, lisser les ridules et ridules d'expression.</span>
+                  </div>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="concern" value="acne" />
+                  <div style="display: flex; flex-direction: column;">
+                    <span class="option-title">Anti-Imperfections & Pores</span>
+                    <span class="option-desc">Resserrer les pores, purifier et réduire l'excès de sébum.</span>
+                  </div>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="concern" value="dullness" />
+                  <div style="display: flex; flex-direction: column;">
+                    <span class="option-title">Éclat & Teint Uniforme</span>
+                    <span class="option-desc">Atténuer les taches brunes et illuminer le teint terne.</span>
+                  </div>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="concern" value="redness" />
+                  <div style="display: flex; flex-direction: column;">
+                    <span class="option-title">Rougeurs & Peau Sensible</span>
+                    <span class="option-desc">Calmer l'inflammation cutanée et renforcer la barrière.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- STEP 3: Budget -->
+            <div class="quiz-step-container" data-step="3">
+              <h3 class="editorial-title" style="font-size: 1.4rem; margin-bottom: 24px; text-align: center;">3. Quel est votre budget par produit ?</h3>
+              <div style="display: flex; flex-direction: column; gap: 16px; max-width: 400px; margin: 0 auto;">
+                <label class="option-card horizontal">
+                  <input type="radio" name="price" value="25" required />
+                  <span class="option-title" style="margin: 0; flex: 1;">Petit Budget (&lt; 25 €)</span>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="price" value="50" />
+                  <span class="option-title" style="margin: 0; flex: 1;">Moyen Budget (&lt; 50 €)</span>
+                </label>
+                <label class="option-card horizontal">
+                  <input type="radio" name="price" value="1000" />
+                  <span class="option-title" style="margin: 0; flex: 1;">Premium (Pas de limite)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Navigation buttons -->
+            <div style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid rgba(28,24,23,0.08); padding-top: 24px;">
+              <button type="button" id="prev-btn" class="btn btn-secondary" style="visibility: hidden;">
+                Retour
+              </button>
+              <button type="button" id="next-btn" class="btn btn-primary">
+                Continuer
+              </button>
+            </div>
+            
+          </form>
+        </div>
+      ) : (
+        /* RECOMMENDATION RESULTS */
+        <div class="animate-fade-in">
+          
+          <div style="text-align: center; margin-bottom: 48px;">
+            <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; color: hsl(var(--accent-rose)); text-transform: uppercase;">
+              Résultats de votre Diagnostic
+            </span>
+            <h1 class="editorial-title" style="font-size: 2.6rem; margin-top: 12px; margin-bottom: 16px;">
+              Votre Routine Recommandée
+            </h1>
+            <p style="color: hsl(var(--text-muted)); font-size: 1.05rem;">
+              Pour votre type de peau <span class="skin-badge dry" style="font-size: 0.85rem; vertical-align: middle;">Peau {skin === 'dry' ? 'Sèche' : skin === 'oily' ? 'Grasse' : skin === 'combination' ? 'Mixte' : 'Normale'}</span> ciblant la problématique <strong>{concern === 'dryness' ? 'Hydratation' : concern === 'anti-aging' ? 'Anti-Âge' : concern === 'acne' ? 'Imperfections' : concern === 'redness' ? 'Rougeurs' : 'Teint terne'}</strong>.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            {recommendations.length > 0 ? (
+              recommendations.map((p, index) => (
+                <div class="premium-card" style="display: flex; gap: 32px; align-items: center; border-left: 5px solid hsl(var(--accent-rose));">
+                  
+                  <!-- Rank number -->
+                  <div style="display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 50%; background-color: hsl(var(--text-dark)); color: white; font-family: var(--font-serif); font-size: 1.6rem; font-weight: 600; flex-shrink: 0;">
+                    {index + 1}
+                  </div>
+                  
+                  <!-- Info -->
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.75rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">
+                      {p.primary_category} · {p.brand_name}
+                    </span>
+                    <h3 class="editorial-title" style="font-size: 1.5rem; margin-bottom: 8px;">
+                      <a href={`/produits/${p.slug}`} style="color: inherit;">{p.product_name}</a>
+                    </h3>
+                    
+                    {p.active_ingredients && (
+                      <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                        {p.active_ingredients.split(', ').map(act => (
+                          <span style="font-size: 0.75rem; background-color: rgba(212,175,55,0.08); color: hsl(var(--accent-gold)); padding: 2px 8px; border-radius: 4px; font-weight: 500;">
+                            {act.charAt(0).toUpperCase() + act.slice(1)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <!-- Rating segment & price -->
+                  <div style="text-align: right; min-width: 160px; border-left: 1px solid rgba(28,24,23,0.08); padding-left: 24px; display: flex; flex-direction: column; justify-content: space-between; height: 100px;">
+                    <div>
+                      <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); text-transform: uppercase; display: block;">Note Peau {skin === 'dry' ? 'Sèche' : skin === 'oily' ? 'Grasse' : skin === 'combination' ? 'Mixte' : 'Normale'}</span>
+                      <strong style="font-size: 1.3rem; color: hsl(var(--accent-rose)); font-weight: 600;">
+                        ★ {p.skin_rating ? p.skin_rating.toFixed(2) : p.rating.toFixed(1)} <span style="font-size: 0.85rem; font-weight: 400; color: hsl(var(--text-muted));">({p.skin_count} avis)</span>
+                      </strong>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                      {SHOW_PRICES && (
+                        <span style="font-weight: 600; font-size: 1.15rem;">
+                          {p.price_usd > 0 ? `${p.price_usd.toFixed(0)} €` : 'Non précisé'}
+                        </span>
+                      )}
+                      <a href={`/produits/${p.slug}`} class="btn btn-primary" style={`padding: 8px 16px; font-size: 0.8rem; border-radius: var(--radius-sm); ${!SHOW_PRICES ? 'margin-left: auto;' : ''}`}>
+                        Détails
+                      </a>
+                    </div>
+                  </div>
+
+                </div>
+              ))
+            ) : (
+              <div class="premium-card" style="text-align: center; padding: 48px;">
+                <p style="color: hsl(var(--text-muted)); margin-bottom: 24px;">Aucun produit ne correspond exactement à tous vos critères de budget et d'objectifs.</p>
+                <a href="/diagnostic" class="btn btn-primary">Recommencer le diagnostic</a>
+              </div>
+            )}
+          </div>
+          
+          <div style="text-align: center; margin-top: 48px;">
+            <a href="/diagnostic" class="btn btn-secondary">
+              <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
+              </svg>
+              Recommencer le Diagnostic
+            </a>
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  </div>
+</Layout>
+
+<!-- Client Side Multi-Step Script -->
+<script is:inline>
+  let currentStep = 1;
+  const form = document.getElementById('diagnostic-form');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  
+  if (form && nextBtn && prevBtn) {
+    const stepContainers = document.querySelectorAll('.quiz-step-container');
+    const progressSteps = document.querySelectorAll('.progress-step');
+
+    function updateStep() {
+      // Toggle steps containers
+      stepContainers.forEach(container => {
+        const stepNum = parseInt(container.getAttribute('data-step'));
+        if (stepNum === currentStep) {
+          container.classList.add('active');
+        } else {
+          container.classList.remove('active');
+        }
+      });
+
+      // Update progress bar
+      progressSteps.forEach(bar => {
+        const stepNum = parseInt(bar.getAttribute('data-step'));
+        if (stepNum <= currentStep) {
+          bar.style.backgroundColor = 'hsl(var(--accent-rose))';
+        } else {
+          bar.style.backgroundColor = 'rgba(28,24,23,0.08)';
+        }
+      });
+
+      // Update buttons
+      if (currentStep === 1) {
+        prevBtn.style.visibility = 'hidden';
+      } else {
+        prevBtn.style.visibility = 'visible';
+      }
+
+      if (currentStep === 3) {
+        nextBtn.textContent = 'Découvrir ma routine';
+      } else {
+        nextBtn.textContent = 'Continuer';
+      }
+    }
+    nextBtn.addEventListener('click', () => {
+      // Validate inputs in current step
+      const stepContainer = stepContainers[currentStep - 1];
+      const requiredInputs = stepContainer.querySelectorAll('input[required]');
+      let isValid = true;
+      
+      requiredInputs.forEach(reqInput => {
+        if (reqInput.type === 'radio') {
+          const name = reqInput.getAttribute('name');
+          const checked = stepContainer.querySelector(`input[name="${name}"]:checked`);
+          if (!checked) {
+            isValid = false;
+          }
+        } else if (reqInput.type === 'checkbox') {
+          if (!reqInput.checked) {
+            isValid = false;
+          }
+        } else {
+          if (!reqInput.value.trim()) {
+            isValid = false;
+          }
+        }
+      });
+
+      if (!isValid) {
+        alert("Veuillez sélectionner une option pour continuer.");
+        return;
+      }
+
+      if (currentStep < 3) {
+        currentStep++;
+        updateStep();
+      } else {
+        form.submit();
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 1) {
+        currentStep--;
+        updateStep();
+      }
+    });
+  }
+</script>
+
+<style>
+  .quiz-step-container {
+    display: none;
+  }
+  .quiz-step-container.active {
+    display: block;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Radio Option Cards */
+  .option-card {
+    background: white;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    position: relative;
+  }
+  .option-card.horizontal {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+  .option-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* Radio styling indicator */
+  .option-card::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 50%;
+    transition: var(--transition-fast);
+  }
+  .option-card.horizontal::after {
+    top: auto;
+    right: 20px;
+  }
+
+  .option-card:has(input[type="radio"]:checked) {
+    border-color: hsl(var(--accent-rose));
+    background-color: rgba(222, 158, 142, 0.04);
+    box-shadow: var(--shadow-sm);
+  }
+  .option-card:has(input[type="radio"]:checked)::after {
+    background-color: hsl(var(--accent-rose));
+    border-color: hsl(var(--accent-rose));
+    box-shadow: inset 0 0 0 3px white;
+  }
+
+  .option-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: hsl(var(--text-dark));
+    margin-bottom: 6px;
+  }
+  .option-card.horizontal .option-title {
+    margin-bottom: 2px;
+  }
+  .option-desc {
+    font-size: 0.82rem;
+    color: hsl(var(--text-muted));
+    line-height: 1.4;
+  }
+</style>

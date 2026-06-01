@@ -1,0 +1,372 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Database from 'better-sqlite3';
+import path from 'path';
+import { SHOW_PRICES } from '../config.js';
+
+// Fetch stats and lists from database
+const dbPath = path.join(process.cwd(), 'skincare.db');
+const db = new Database(dbPath);
+
+// Trust stats
+const totalProducts = db.prepare("SELECT COUNT(*) as count FROM products").get().count;
+const totalBrands = db.prepare("SELECT COUNT(DISTINCT brand_name) as count FROM products").get().count;
+const totalReviews = db.prepare("SELECT COUNT(*) as count FROM reviews").get().count;
+
+// Fetch Top 8 Brands with most products
+const topBrands = db.prepare(`
+  SELECT brand_name, COUNT(*) as p_count 
+  FROM products 
+  GROUP BY brand_name 
+  ORDER BY p_count DESC 
+  LIMIT 8
+`).all();
+
+// Fetch Trending Products
+const trendingProducts = db.prepare(`
+  SELECT product_name, brand_name, slug, rating, price_usd, loves_count, primary_category 
+  FROM products 
+  WHERE rating >= 4.5 AND reviews_count > 10
+  ORDER BY loves_count DESC 
+  LIMIT 4
+`).all();
+
+// Fetch Top 1 for each skin type
+const topDry = db.prepare("SELECT product_name, brand_name, slug, rating_dry, price_usd FROM products WHERE rating_dry >= 4.6 AND reviews_dry_count >= 5 ORDER BY loves_count DESC LIMIT 1").get();
+const topOily = db.prepare("SELECT product_name, brand_name, slug, rating_oily, price_usd FROM products WHERE rating_oily >= 4.5 AND reviews_oily_count >= 5 ORDER BY loves_count DESC LIMIT 1").get();
+const topCombination = db.prepare("SELECT product_name, brand_name, slug, rating_combination, price_usd FROM products WHERE rating_combination >= 4.5 AND reviews_combination_count >= 5 ORDER BY loves_count DESC LIMIT 1").get();
+const topNormal = db.prepare("SELECT product_name, brand_name, slug, rating_normal, price_usd FROM products WHERE rating_normal >= 4.6 AND reviews_normal_count >= 5 ORDER BY loves_count DESC LIMIT 1").get();
+
+db.close();
+
+const slugify = (text) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[-\s]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+const activeIngredientsList = [
+  { name: "Acide Hyaluronique", slug: "acide-hyaluronique", desc: "Le secret de l'hydratation profonde, retient jusqu'à 1000 fois son poids en eau.", tag: "Hydratation", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/acide-hyaluronique" },
+  { name: "Rétinol", slug: "retinol", desc: "L'actif anti-âge de référence qui stimule le renouvellement cellulaire.", tag: "Anti-Âge", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/retinol" },
+  { name: "Niacinamide", slug: "niacinamide", desc: "Apaise les rougeurs, resserre les pores et illumine le teint.", tag: "Anti-Imperfections", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/niacinamide" },
+  { name: "Vitamine C", slug: "vitamine-c", desc: "Un puissant antioxydant pour un coup d'éclat immédiat et anti-taches.", tag: "Éclat", scientificUrl: "https://www.loreal-paris.fr/ingredients/vitamine-c" },
+  { name: "Acide Salicylique", slug: "acide-salicylique", desc: "Exfolie en profondeur et élimine les points noirs pour purifier la peau.", tag: "Imperfections", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/acide-salicylique" },
+  { name: "Céramides", slug: "ceramides", desc: "Le ciment cellulaire protecteur indispensable pour restaurer la barrière cutanée.", tag: "Barrière Cutanée", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/les-ceramides" }
+];
+---
+
+<Layout title="123Maquillage - Diagnostic & Guide de Soins de la Peau">
+  
+  <!-- Hero Section Premium -->
+  <section style="padding: 100px 0 80px 0; background: linear-gradient(180deg, rgba(245, 239, 236, 0.5) 0%, rgba(253, 251, 247, 0) 100%);">
+    <div class="container">
+      <div class="grid-cols-2" style="align-items: center;">
+        
+        <div class="animate-fade-in">
+          <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; color: hsl(var(--accent-rose)); text-transform: uppercase; margin-bottom: 16px; display: inline-block;">
+            Science dermatologique & intelligence collective
+          </span>
+          <h1 class="editorial-title" style="font-size: 3.6rem; margin-bottom: 24px;">
+            Le soin idéal pour <br/>
+            <span class="editorial-italic text-rose">chaque type</span> de peau.
+          </h1>
+          <p style="font-size: 1.15rem; color: hsl(var(--text-muted)); margin-bottom: 40px; max-width: 520px; line-height: 1.7;">
+            Analysez la composition de milliers de cosmétiques et découvrez les produits plébiscités scientifiquement par plus de <strong style="color: hsl(var(--text-dark));">{totalReviews.toLocaleString()}</strong> utilisateurs ayant la même peau que vous.
+          </p>
+          
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <a href="/diagnostic" class="btn btn-primary">
+              <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Faire mon Diagnostic Gratuit
+            </a>
+            <a href="#trending" class="btn btn-secondary">Découvrir les Soins</a>
+          </div>
+
+          <!-- Trust Badges -->
+          <div style="display: flex; gap: 40px; margin-top: 60px; border-top: 1px solid rgba(212, 175, 55, 0.15); padding-top: 30px;">
+            <div>
+              <span class="editorial-title" style="font-size: 1.8rem; display: block; color: hsl(var(--accent-gold));">{totalProducts}</span>
+              <span style="font-size: 0.85rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Cosmétiques analysés</span>
+            </div>
+            <div>
+              <span class="editorial-title" style="font-size: 1.8rem; display: block; color: hsl(var(--accent-gold));">{totalBrands}</span>
+              <span style="font-size: 0.85rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Marques répertoriées</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visuel Hero (Premium mockup generated through styling) -->
+        <div class="animate-fade-in delay-1" style="display: flex; justify-content: center; position: relative;">
+          <div style="width: 100%; max-width: 440px; height: 500px; background: linear-gradient(135deg, hsl(var(--bg-secondary)) 0%, rgba(222, 158, 142, 0.1) 100%); border-radius: var(--radius-xl); border: 1px solid rgba(212, 175, 55, 0.15); padding: 40px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-lg); overflow: hidden; position: relative;">
+            <div style="position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(222, 158, 142, 0.25) 0%, rgba(253, 251, 247, 0) 70%); filter: blur(30px); pointer-events: none;"></div>
+            
+            <div style="z-index: 2;">
+              <span style="font-size: 0.75rem; background: hsl(var(--text-dark)); color: white; padding: 4px 12px; border-radius: 20px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Diagnostic vedette</span>
+              <h3 class="editorial-title" style="font-size: 2.2rem; margin-top: 16px; color: hsl(var(--text-dark)); font-weight: 500; line-height: 1.3;">
+                Une routine <br/>adaptée à <span class="editorial-italic text-rose">votre</span> ADN cutané.
+              </h3>
+            </div>
+
+            <!-- Quiz mockup cards stack -->
+            <div style="display: flex; flex-direction: column; gap: 12px; z-index: 2;">
+              <div style="background: white; border: 1px solid rgba(212, 175, 55, 0.15); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-weight: 500; font-size: 0.95rem;">1. Type de Peau</span>
+                <span class="skin-badge dry">Peau Sèche</span>
+              </div>
+              <div style="background: white; border: 1px solid rgba(212, 175, 55, 0.15); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-weight: 500; font-size: 0.95rem;">2. Préoccupation</span>
+                <span class="skin-badge oily" style="background: rgba(212,175,55,0.08); color: hsl(var(--accent-gold));">Rides / Anti-Âge</span>
+              </div>
+              <div style="background: white; border: 1px solid rgba(212, 175, 55, 0.25); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; border-left: 4px solid hsl(var(--accent-rose));">
+                <span style="font-weight: 600; font-size: 0.95rem;">3. Soin Recommandé</span>
+                <span style="font-weight: 600; color: hsl(var(--accent-rose)); font-size: 0.9rem;">★★★★★ 98% Match</span>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Recommandations par Type de Peau -->
+  <section style="padding: 100px 0; background-color: #FAF8F5;">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 60px;">
+        <h2 class="editorial-title" style="font-size: 2.6rem; margin-bottom: 16px;">
+          Les favoris absolus <span class="editorial-italic text-rose">par type de peau</span>
+        </h2>
+        <p style="color: hsl(var(--text-muted)); max-width: 580px; margin: 0 auto; font-size: 1.05rem;">
+          Voici les soins les mieux notés, analysés de manière transparente selon les avis des utilisateurs ayant exactement la même peau.
+        </p>
+      </div>
+
+      <div class="grid-cols-4">
+        <!-- Dry Skin -->
+        {topDry && (
+          <div class="premium-card flex-center" style="flex-direction: column; text-align: center; justify-content: space-between; min-height: 320px;">
+            <div>
+              <span class="skin-badge dry" style="margin-bottom: 20px;">Peau Sèche</span>
+              <h3 class="editorial-title" style="font-size: 1.3rem; margin-bottom: 8px; line-height: 1.3;">{topDry.product_name}</h3>
+              <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); margin-bottom: 16px;">par <strong>{topDry.brand_name}</strong></p>
+            </div>
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 600; color: hsl(var(--accent-gold)); display: block; margin-bottom: 16px;">
+                ★ {topDry.rating_dry.toFixed(1)} / 5
+              </span>
+              <a href={`/produits/${topDry.slug}`} class="btn btn-secondary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: var(--radius-sm);">Voir le produit</a>
+            </div>
+          </div>
+        )}
+
+        <!-- Oily Skin -->
+        {topOily && (
+          <div class="premium-card flex-center" style="flex-direction: column; text-align: center; justify-content: space-between; min-height: 320px;">
+            <div>
+              <span class="skin-badge oily" style="margin-bottom: 20px;">Peau Grasse</span>
+              <h3 class="editorial-title" style="font-size: 1.3rem; margin-bottom: 8px; line-height: 1.3;">{topOily.product_name}</h3>
+              <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); margin-bottom: 16px;">par <strong>{topOily.brand_name}</strong></p>
+            </div>
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 600; color: #16a34a; display: block; margin-bottom: 16px;">
+                ★ {topOily.rating_oily.toFixed(1)} / 5
+              </span>
+              <a href={`/produits/${topOily.slug}`} class="btn btn-secondary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: var(--radius-sm);">Voir le produit</a>
+            </div>
+          </div>
+        )}
+
+        <!-- Combination Skin -->
+        {topCombination && (
+          <div class="premium-card flex-center" style="flex-direction: column; text-align: center; justify-content: space-between; min-height: 320px;">
+            <div>
+              <span class="skin-badge combination" style="margin-bottom: 20px;">Peau Mixte</span>
+              <h3 class="editorial-title" style="font-size: 1.3rem; margin-bottom: 8px; line-height: 1.3;">{topCombination.product_name}</h3>
+              <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); margin-bottom: 16px;">par <strong>{topCombination.brand_name}</strong></p>
+            </div>
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 600; color: #9333ea; display: block; margin-bottom: 16px;">
+                ★ {topCombination.rating_combination.toFixed(1)} / 5
+              </span>
+              <a href={`/produits/${topCombination.slug}`} class="btn btn-secondary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: var(--radius-sm);">Voir le produit</a>
+            </div>
+          </div>
+        )}
+
+        <!-- Normal Skin -->
+        {topNormal && (
+          <div class="premium-card flex-center" style="flex-direction: column; text-align: center; justify-content: space-between; min-height: 320px;">
+            <div>
+              <span class="skin-badge normal" style="margin-bottom: 20px;">Peau Normale</span>
+              <h3 class="editorial-title" style="font-size: 1.3rem; margin-bottom: 8px; line-height: 1.3;">{topNormal.product_name}</h3>
+              <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); margin-bottom: 16px;">par <strong>{topNormal.brand_name}</strong></p>
+            </div>
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 600; color: #ea580c; display: block; margin-bottom: 16px;">
+                ★ {topNormal.rating_normal.toFixed(1)} / 5
+              </span>
+              <a href={`/produits/${topNormal.slug}`} class="btn btn-secondary" style="padding: 10px 20px; font-size: 0.85rem; border-radius: var(--radius-sm);">Voir le produit</a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Ingrédients Actifs -->
+  <section id="ingredients" style="padding: 100px 0;">
+    <div class="container">
+      
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 60px; flex-wrap: wrap; gap: 24px;">
+        <div>
+          <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; color: hsl(var(--accent-rose)); text-transform: uppercase; margin-bottom: 12px; display: inline-block;">
+            Ingrédients & Composition
+          </span>
+          <h2 class="editorial-title" style="font-size: 2.6rem;">
+            Cibler votre besoin par <br/>
+            <span class="editorial-italic text-rose">ingrédient actif</span>
+          </h2>
+        </div>
+        <p style="color: hsl(var(--text-muted)); max-width: 440px; font-size: 1.02rem;">
+          Cliquez sur un actif pour en savoir plus sur son action biologique et découvrir les meilleurs soins formulés avec celui-ci.
+        </p>
+      </div>
+
+      <div class="grid-cols-3">
+        {activeIngredientsList.map(item => (
+          <div class="premium-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 200px;">
+            <div>
+              <span style="font-size: 0.75rem; background-color: rgba(222, 158, 142, 0.08); color: hsl(var(--accent-rose)); padding: 4px 10px; border-radius: 12px; font-weight: 600; display: inline-block; margin-bottom: 16px;">
+                {item.tag}
+              </span>
+              <h3 class="editorial-title" style="font-size: 1.4rem; margin-bottom: 12px;">{item.name}</h3>
+              <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); line-height: 1.6;">{item.desc}</p>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px; font-size: 0.85rem; font-weight: 600; flex-wrap: wrap; gap: 12px;">
+              <a href={`/ingredients/${item.slug}`} style="color: hsl(var(--accent-gold)); display: inline-flex; align-items: center; gap: 4px;" class="ing-card-link">
+                Découvrir les soins
+                <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+              {item.scientificUrl && (
+                <a 
+                  href={item.scientificUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer nofollow" 
+                  style="color: hsl(var(--text-muted)); font-weight: 500; font-size: 0.8rem; text-decoration: underline;"
+                  class="scientific-link"
+                >
+                  Source Scientifique ↗
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section: Produits Tendances -->
+  <section id="trending" style="padding: 100px 0; background-color: #FAF8F5;">
+    <div class="container">
+      
+      <div style="text-align: center; margin-bottom: 60px;">
+        <h2 class="editorial-title" style="font-size: 2.6rem; margin-bottom: 16px;">
+          Les soins cultes du <span class="editorial-italic text-rose">moment</span>
+        </h2>
+        <p style="color: hsl(var(--text-muted)); font-size: 1.05rem;">
+          Les soins stars les plus recherchés et validés scientifiquement par notre communauté.
+        </p>
+      </div>
+
+      <div class="grid-cols-4">
+        {trendingProducts.map(p => (
+          <div class="premium-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 380px;">
+            <div>
+              <span style="font-size: 0.75rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
+                {p.primary_category}
+              </span>
+              <h3 class="editorial-title" style="font-size: 1.25rem; margin-bottom: 6px; line-height: 1.3; font-weight: 500;">
+                <a href={`/produits/${p.slug}`} style="color: inherit;">{p.product_name}</a>
+              </h3>
+              <p style="font-size: 0.85rem; color: hsl(var(--text-muted)); margin-bottom: 12px;">
+                par <strong>{p.brand_name}</strong>
+              </p>
+            </div>
+            
+            <div>
+              <!-- Rating and loves -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 4px; font-weight: 500; font-size: 0.9rem; color: hsl(var(--accent-gold));">
+                  <span>★</span>
+                  <span>{p.rating.toFixed(1)}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 4px;">
+                  <span>♥</span>
+                  <span>{p.loves_count.toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(212, 175, 55, 0.08); padding-top: 16px;">
+                {SHOW_PRICES && (
+                  <span style="font-weight: 600; font-size: 1.1rem; color: hsl(var(--text-dark));">
+                    {p.price_usd > 0 ? `${p.price_usd.toFixed(0)} €` : 'Non renseigné'}
+                  </span>
+                )}
+                <a href={`/produits/${p.slug}`} class="btn btn-primary" style={`padding: 8px 16px; font-size: 0.8rem; border-radius: var(--radius-sm); ${!SHOW_PRICES ? 'margin-left: auto;' : ''}`}>
+                  Détails
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section: Marques Populaires -->
+  <section id="marques" style="padding: 100px 0;">
+    <div class="container">
+      
+      <div style="text-align: center; margin-bottom: 60px;">
+        <h2 class="editorial-title" style="font-size: 2.6rem; margin-bottom: 16px;">
+          Les plus grandes <span class="editorial-italic text-rose">marques de cosmétiques</span>
+        </h2>
+        <p style="color: hsl(var(--text-muted)); font-size: 1.05rem;">
+          Découvrez nos 8 marques phares parmi les <strong style="color: hsl(var(--text-dark));">{totalBrands} marques répertoriées</strong> dans notre base de données.
+        </p>
+      </div>
+
+      <div class="grid-cols-4">
+        {topBrands.map(b => (
+          <a href={`/marques/${slugify(b.brand_name)}`} class="premium-card flex-center" style="flex-direction: column; text-align: center; padding: 32px 24px; min-height: 160px; justify-content: center;">
+            <h3 class="editorial-title" style="font-size: 1.4rem; margin-bottom: 8px;">{b.brand_name}</h3>
+            <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">
+              {b.p_count} Produits
+            </span>
+          </a>
+        ))}
+      </div>
+
+      <div style="text-align: center; margin-top: 40px; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 30px;">
+        <p style="font-size: 0.95rem; color: hsl(var(--text-muted)); max-width: 600px; margin: 0 auto; line-height: 1.6;">
+          📍 <strong>+{totalBrands - 8} autres maisons de cosmétiques</strong> (comme Origins, Tata Harper, Kiehl's, Caudalie...) et leurs produits sont entièrement indexés et consultables. Utilisez la barre de recherche instantanée ci-dessus pour explorer l'intégralité du catalogue !
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</Layout>

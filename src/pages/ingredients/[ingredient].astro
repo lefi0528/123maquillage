@@ -1,0 +1,211 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Database from 'better-sqlite3';
+import path from 'path';
+import { SHOW_PRICES } from '../../config.js';
+export async function getStaticPaths() {
+  const ingredients = [
+    { 
+      name: "Rétinol", 
+      slug: "retinol", 
+      activeName: "retinol", 
+      desc: "Le rétinol est l'actif anti-âge absolu de référence en dermatologie. Dérivé de la vitamine A, il stimule la production naturelle de collagène et d'élastine, accélère la régénération des cellules de l'épiderme et aide à lisser rides, ridules et imperfections pour un grain de peau affiné." 
+    },
+    { 
+      name: "Acide Hyaluronique", 
+      slug: "acide-hyaluronique", 
+      activeName: "acide hyaluronique", 
+      desc: "L'acide hyaluronique est une molécule naturellement présente dans notre peau, réputée pour son pouvoir hydratant hors du commun : elle peut retenir jusqu'à 1000 fois son propre poids en eau. C'est l'actif par excellence pour repulper la peau, lisser les ridules de déshydratation et restaurer le confort." 
+    },
+    { 
+      name: "Niacinamide", 
+      slug: "niacinamide", 
+      activeName: "niacinamide", 
+      desc: "Aussi appelée vitamine B3, la Niacinamide est un actif polyvalent adoré de tous les types de peau. Elle renforce la barrière cutanée, resserre visiblement les pores dilatés, régule la production de sébum, calme l'inflammation et estompe les taches pour un teint parfaitement uniforme." 
+    },
+    { 
+      name: "Vitamine C", 
+      slug: "vitamine-c", 
+      activeName: "vitamine c", 
+      desc: "La vitamine C est l'antioxydant le plus puissant utilisé en cosmétique. Elle combat les radicaux libres responsables du vieillissement cutané, stimule l'éclat de la peau en inhibant la mélanine (effet anti-taches), et booste la production de collagène pour une peau plus ferme." 
+    },
+    { 
+      name: "Acide Salicylique", 
+      slug: "acide-salicylique", 
+      activeName: "acide salicylique", 
+      desc: "L'acide salicylique est un acide bêta-hydroxylé (BHA) liposoluble. Cette propriété lui permet de pénétrer profondément à l'intérieur du sébum des pores pour les désincruster, éliminer les cellules mortes et les points noirs, et réguler les éruptions d'acné." 
+    },
+    { 
+      name: "Acide Glycolique", 
+      slug: "acide-glycolique", 
+      activeName: "acide glycolique", 
+      desc: "L'acide glycolique est le plus petit des acides alpha-hydroxylés (AHA). Sa structure lui confère une excellente pénétration en surface pour éliminer les peaux mortes, accélérer l'éclat du teint, réduire l'apparence des cicatrices d'acné et lisser le grain de peau." 
+    },
+    { 
+      name: "Céramides", 
+      slug: "ceramides", 
+      activeName: "ceramides", 
+      desc: "Les céramides sont des lipides (acides gras) naturellement présents dans notre épiderme, constituant environ 50% de la barrière cutanée. Ils agissent comme un 'ciment' cellulaire, essentiel pour retenir l'hydratation et protéger la peau des agressions extérieures." 
+    },
+    { 
+      name: "Squalane", 
+      slug: "squalane", 
+      activeName: "squalane", 
+      desc: "Le squalane est un émollient exceptionnel dérivé du squalène. Très stable, léger et non comédogène, il mime le sébum naturel de la peau pour sceller l'hydratation en profondeur sans boucher les pores, convenant même aux peaux à imperfections." 
+    },
+    {
+      name: "Acide Lactique",
+      slug: "acide-lactique",
+      activeName: "acide lactique",
+      desc: "L'acide lactique est un acide alpha-hydroxylé (AHA) doux, principalement issu de la fermentation des sucres. Il exfolie en douceur la surface de la peau tout en favorisant son hydratation naturelle. C'est l'actif idéal des peaux sensibles pour raviver l'éclat, unifier le teint et atténuer les ridules."
+    },
+    {
+      name: "Centella Asiatica",
+      slug: "centella-asiatica",
+      activeName: "centella asiatica",
+      desc: "Aussi appelée l'Herbe du Tigre, la Centella Asiatica est une plante médicinale légendaire aux vertus apaisantes, anti-inflammatoires et cicatrisantes exceptionnelles. Elle répare en profondeur les barrières cutanées lésées ou sensibilisées et stimule la synthèse de collagène."
+    },
+    {
+      name: "Huile d'Arbre à Thé",
+      slug: "huile-darbre-a-the",
+      activeName: "huile d'arbre a the",
+      desc: "L'huile d'arbre à thé (Tea Tree Oil) est l'actif purifiant naturel de référence pour les peaux sujettes aux imperfections. Grâce à ses vertus antibactériennes majeures, elle purifie l'épiderme en profondeur, aide à réguler la production de sébum et atténue visiblement les boutons."
+    }
+  ];
+
+  return ingredients.map(ing => ({
+    params: { ingredient: ing.slug },
+    props: { ing }
+  }));
+}
+
+const { ingredient } = Astro.params;
+const { ing } = Astro.props;
+
+const dbPath = path.join(process.cwd(), 'skincare.db');
+const db = new Database(dbPath);
+
+// Query all products containing this active ingredient
+const products = db.prepare("SELECT * FROM products WHERE active_ingredients LIKE ? ORDER BY loves_count DESC").all(`%${ing.activeName}%`);
+
+db.close();
+
+// Premium schemas for active ingredient page (Pillar 2)
+const ingredientSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemPage",
+  "name": `${ing.name} en Cosmétique - Bienfaits & Meilleurs Soins - 123Maquillage`,
+  "description": `Découvrez les vertus dermatologiques de l'actif ${ing.name} et notre sélection des meilleurs cosmétiques formulés avec cet ingrédient.`,
+  "url": `https://123maquillage.com/ingredients/${ingredient}`
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "https://123maquillage.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": ing.name,
+      "item": `https://123maquillage.com/ingredients/${ingredient}`
+    }
+  ]
+};
+---
+
+<Layout 
+  title={`${ing.name} en Cosmétique - Bienfaits & Meilleurs Soins - 123Maquillage`}
+  description={`Découvrez les vertus dermatologiques de l'actif ${ing.name} et notre sélection des meilleurs cosmétiques formulés avec cet ingrédient.`}
+  schema={[ingredientSchema, breadcrumbSchema]}
+>
+  <div style="padding: 60px 0 100px 0;">
+    <div class="container">
+      
+      <!-- Back Link -->
+      <a href="/" style="display: inline-flex; align-items: center; gap: 8px; color: hsl(var(--text-muted)); font-weight: 500; font-size: 0.95rem; margin-bottom: 40px; transition: var(--transition-fast);" class="back-link">
+        <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Retour à l'accueil
+      </a>
+
+      <!-- Ingredient Profile Header -->
+      <div class="premium-card" style="padding: 48px; margin-bottom: 60px; border-left: 5px solid hsl(var(--accent-gold)); background: linear-gradient(135deg, hsl(var(--bg-secondary)) 0%, rgba(222, 158, 142, 0.08) 100%);">
+        <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 12px;">
+          Actif Dermatologique Majeur
+        </span>
+        <h1 class="editorial-title" style="font-size: 3rem; margin-bottom: 20px;">
+          {ing.name}
+        </h1>
+        <p style="color: hsl(var(--text-dark)); font-size: 1.12rem; line-height: 1.8; max-width: 720px; font-family: var(--font-sans);">
+          {ing.desc}
+        </p>
+      </div>
+
+      <!-- Products Listing -->
+      <div style="margin-bottom: 30px;">
+        <h2 class="editorial-title" style="font-size: 2rem; margin-bottom: 12px;">
+          Les meilleurs soins formulés <span class="editorial-italic text-rose">au {ing.name}</span>
+        </h2>
+        <p style="color: hsl(var(--text-muted)); font-size: 1rem; margin-bottom: 40px;">
+          Retrouvez les {products.length} meilleurs cosmétiques contenant du {ing.name}, classés selon l'avis de la communauté.
+        </p>
+      </div>
+
+      <!-- Products Grid -->
+      <div class="grid-cols-4">
+        {products.map(p => (
+          <div class="premium-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 360px;">
+            <div>
+              <span style="font-size: 0.75rem; color: hsl(var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
+                {p.primary_category} · {p.brand_name}
+              </span>
+              <h3 class="editorial-title" style="font-size: 1.25rem; margin-bottom: 8px; line-height: 1.3; font-weight: 500;">
+                <a href={`/produits/${p.slug}`} style="color: inherit;">{p.product_name}</a>
+              </h3>
+            </div>
+            
+            <div>
+              <!-- Rating and loves -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 4px; font-weight: 500; font-size: 0.9rem; color: hsl(var(--accent-gold));">
+                  <span>★</span>
+                  <span>{p.rating.toFixed(1)}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 4px;">
+                  <span>♥</span>
+                  <span>{p.loves_count.toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(212, 175, 55, 0.08); padding-top: 16px;">
+                {SHOW_PRICES && (
+                  <span style="font-weight: 600; font-size: 1.1rem; color: hsl(var(--text-dark));">
+                    {p.price_usd > 0 ? `${p.price_usd.toFixed(0)} €` : 'Non renseigné'}
+                  </span>
+                )}
+                <a href={`/produits/${p.slug}`} class="btn btn-primary" style={`padding: 8px 16px; font-size: 0.8rem; border-radius: var(--radius-sm); ${!SHOW_PRICES ? 'margin-left: auto;' : ''}`}>
+                  Détails
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .back-link:hover {
+    color: hsl(var(--accent-rose)) !important;
+    padding-left: 4px;
+  }
+</style>

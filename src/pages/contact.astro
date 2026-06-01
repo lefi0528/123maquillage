@@ -1,0 +1,417 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Database from 'better-sqlite3';
+import path from 'path';
+
+// Fetch B2B sales data for interactive dashboard
+const dbPath = path.join(process.cwd(), 'skincare.db');
+const db = new Database(dbPath);
+
+// 1. Total statistics
+const totalStats = db.prepare("SELECT SUM(amount) as revenue, SUM(boxes_shipped) as boxes FROM sales_trends").get();
+const totalRevenue = totalStats.revenue || 0;
+const totalBoxes = totalStats.boxes || 0;
+
+// 2. Top products
+const topProducts = db.prepare(`
+  SELECT product_name, SUM(boxes_shipped) as boxes 
+  FROM sales_trends 
+  GROUP BY product_name 
+  ORDER BY boxes DESC 
+  LIMIT 3
+`).all();
+
+// 3. Country distribution
+const countrySales = db.prepare(`
+  SELECT country, SUM(amount) as amount 
+  FROM sales_trends 
+  GROUP BY country 
+  ORDER BY amount DESC
+`).all();
+
+db.close();
+
+// Translate products to French for premium editorial design
+const PRODUCT_TRANSLATIONS = {
+  "Tea Tree Moisturizer": "Soin Purifiant au Tea Tree",
+  "Hydrating Face Serum": "Sérum Hydratant Repulpant",
+  "Anti-Aging Serum": "Sérum Anti-Âge Lissant",
+  "Aloe Vera Gel": "Gel Apaisant Aloe Vera",
+  "Body Butter Cream": "Crème Beurre Corporel",
+  "Salicylic Acid Cleanser": "Nettoyant Acide Salicylique",
+  "Face Sheet Masks": "Masques Tissu Éclat",
+  "Hair Repair Oil": "Huile Réparatrice Cheveux",
+  "Lip Balm Pack": "Lot de Baumes à Lèvres",
+  "Rose Water Toner": "Lotion Tonique Eau de Rose",
+  "Under Eye Cream": "Crème Regard Anti-Cernes",
+  "Vitamin C Cream": "Crème Éclat Vitamine C",
+  "Charcoal Face Wash": "Nettoyant Purifiant Charbon",
+  "SPF 50 Sunscreen": "Fluide Protecteur SPF 50"
+};
+
+function translateProduct(name) {
+  return PRODUCT_TRANSLATIONS[name] || name;
+}
+---
+
+<Layout 
+  title="Contact & Partenariats - 123Maquillage"
+  description="Contactez l'équipe éditoriale de 123maquillage.com. Demandes de partenariat, ajout de marque, publication d'articles ou opportunités publicitaires."
+>
+  <div style="padding: 80px 0 120px 0; background: linear-gradient(180deg, rgba(222, 158, 142, 0.03) 0%, transparent 100%);">
+    <div class="container" style="max-w: 1000px;">
+      
+      <!-- Grid Layout for Contact form & info -->
+      <div class="grid-cols-2" style="align-items: center; gap: 60px; margin-bottom: 80px;">
+        
+        <!-- Left Column: Editorial Text -->
+        <div class="animate-fade-in">
+          <span class="editorial-title" style="font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; color: hsl(var(--accent-rose)); display: block; margin-bottom: 12px;">
+            Collaborations &amp; Synergies
+          </span>
+          <h1 class="editorial-title" style="font-size: 3.2rem; margin-bottom: 24px; line-height: 1.1;">
+            Rejoignez l'aventure <span class="editorial-italic text-rose">123maquillage</span>
+          </h1>
+          <p style="font-size: 1.05rem; color: hsl(var(--text-muted)); margin-bottom: 32px; line-height: 1.8; font-weight: 350;">
+            Vous êtes une marque cosmétique innovante ? Un expert de la formulation dermatologique ? Un média beauté en quête de synergies ? Nous serions ravis de collaborer avec vous pour enrichir notre guide d'autorité éco-dermatologique.
+          </p>
+
+          <!-- Benefits Bullet list -->
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 40px;">
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <div style="background-color: rgba(212, 175, 55, 0.08); color: hsl(var(--accent-gold)); padding: 8px; border-radius: 50%; display: flex;">
+                <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <strong style="color: hsl(var(--text-dark)); display: block; margin-bottom: 4px; font-family: var(--font-serif); font-size: 1.05rem;">Ajouter votre marque</strong>
+                <span style="color: hsl(var(--text-muted)); font-size: 0.9rem;">Indexez vos produits et bénéficiez de statistiques de compatibilité dermatologique.</span>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <div style="background-color: rgba(222, 158, 142, 0.08); color: hsl(var(--accent-rose)); padding: 8px; border-radius: 50%; display: flex;">
+                <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+              </div>
+              <div>
+                <strong style="color: hsl(var(--text-dark)); display: block; margin-bottom: 4px; font-family: var(--font-serif); font-size: 1.05rem;">Publication &amp; Tribune d'expert</strong>
+                <span style="color: hsl(var(--text-muted)); font-size: 0.9rem;">Rédigez un article invité scientifique ou partagez vos conseils de formulation d'actifs.</span>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <div style="background-color: rgba(212, 175, 55, 0.08); color: hsl(var(--accent-gold)); padding: 8px; border-radius: 50%; display: flex;">
+                <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <strong style="color: hsl(var(--text-dark)); display: block; margin-bottom: 4px; font-family: var(--font-serif); font-size: 1.05rem;">Partenariat &amp; Affiliation</strong>
+                <span style="color: hsl(var(--text-muted)); font-size: 0.9rem;">Mettez en avant vos soins via des boutons d'achat directs ou des intégrations publicitaires haut de gamme.</span>
+              </div>
+            </div>
+          </div>
+          
+          <span style="font-size: 0.85rem; color: hsl(var(--text-muted));">
+            Une réponse vous sera apportée sous **48 heures ouvrées**. Vous pouvez aussi nous contacter à <a href="mailto:contact@123maquillage.com" style="color: hsl(var(--accent-gold)); font-weight: 600; text-decoration: underline;">contact@123maquillage.com</a>.
+          </span>
+        </div>
+
+        <!-- Right Column: Interactive Premium Contact Form -->
+        <div class="animate-fade-in delay-1">
+          <div class="premium-card" style="padding: 44px; background: white;" id="form-container">
+            <h2 class="editorial-title" style="font-size: 1.8rem; margin-bottom: 24px;">Envoyez votre <span class="editorial-italic text-rose">demande</span></h2>
+            
+            <form id="contact-form" style="display: flex; flex-direction: column; gap: 20px;">
+              
+              <!-- Subject Selector Category -->
+              <div>
+                <label for="contact-subject" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: hsl(var(--text-dark)); display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Objet de votre message</label>
+                <select id="contact-subject" required style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.25); background: white; font-size: 0.95rem; color: hsl(var(--text-dark)); transition: var(--transition-fast);">
+                  <option value="" disabled selected>Sélectionnez une option...</option>
+                  <option value="brand">Ajouter ma marque cosmétique (+ indexation de produits)</option>
+                  <option value="publication">Proposer une publication / Article invité d'expert</option>
+                  <option value="partnership">Opportunité de partenariat commercial ou d'affiliation</option>
+                  <option value="other">Autre demande éditoriale ou technique</option>
+                </select>
+              </div>
+
+              <!-- Name and Company Fields (Grouped) -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div>
+                  <label for="contact-name" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: hsl(var(--text-dark)); display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Votre Nom complet</label>
+                  <input type="text" id="contact-name" required placeholder="Sophie Martin" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.25); font-size: 0.95rem;" />
+                </div>
+                <div>
+                  <label for="contact-company" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: hsl(var(--text-dark)); display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Société ou Marque</label>
+                  <input type="text" id="contact-company" placeholder="Ex: Maison d'Éden" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.25); font-size: 0.95rem;" />
+                </div>
+              </div>
+
+              <!-- Email Field -->
+              <div>
+                <label for="contact-email" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: hsl(var(--text-dark)); display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Adresse e-mail professionnelle</label>
+                <input type="email" id="contact-email" required placeholder="sophie@entreprise.com" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.25); font-size: 0.95rem;" />
+              </div>
+
+              <!-- Message Field -->
+              <div>
+                <label for="contact-message" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: hsl(var(--text-dark)); display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Détaillez votre projet ou proposition</label>
+                <textarea id="contact-message" required rows="5" placeholder="Décrivez succinctement votre marque, vos soins à référencer ou la thématique de publication envisagée..." style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid rgba(212, 175, 55, 0.25); font-size: 0.95rem; line-height: 1.5; resize: vertical;"></textarea>
+              </div>
+
+              <!-- GDPR Compliance Checkbox -->
+              <div style="display: flex; gap: 10px; align-items: flex-start; margin-top: 5px;">
+                <input type="checkbox" id="contact-gdpr" required style="width: 18px; height: 18px; accent-color: hsl(var(--accent-rose)); cursor: pointer; margin-top: 2px;" />
+                <label for="contact-gdpr" style="font-size: 0.8rem; color: hsl(var(--text-muted)); line-height: 1.4; cursor: pointer; select-none;">
+                  J'accepte que 123maquillage.com traite mes informations pour répondre à ma demande conformément à la <a href="/politique-de-confidentialite" style="color: hsl(var(--accent-rose)); text-decoration: underline;" target="_blank">Politique de Confidentialité</a>.
+                </label>
+              </div>
+
+              <!-- Submit button -->
+              <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px 28px; font-size: 1rem; border-radius: var(--radius-md); font-weight: 600; margin-top: 10px;" id="submit-btn">
+                <span>Transmettre ma demande</span>
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Horizontal separator line -->
+      <hr style="border: 0; border-top: 1px solid rgba(212, 175, 55, 0.15); margin: 60px 0;" />
+
+      <!-- Observatoire B2B Section (NEW Market Insights) -->
+      <div class="animate-fade-in delay-2">
+        <div style="text-align: center; margin-bottom: 48px;">
+          <span class="editorial-title" style="font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; color: hsl(var(--accent-gold)); display: block; margin-bottom: 8px;">
+            Observatoire B2B 123Maquillage
+          </span>
+          <h2 class="editorial-title" style="font-size: 2.2rem; margin-bottom: 16px;">
+            Tendances du Marché &amp; <span class="editorial-italic text-rose">Demande Globale</span>
+          </h2>
+          <p style="color: hsl(var(--text-muted)); font-size: 0.98rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+            Accédez aux statistiques réelles d'exportation et de chiffre d'affaires cumulés sur nos canaux partenaires internationaux. La preuve par les chiffres de la pertinence de votre référencement.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: stretch;">
+          
+          <!-- B2B Stats Column (Cards stack) -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Global volume card -->
+            <div class="premium-card" style="padding: 28px; background: white; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); text-transform: uppercase; font-weight: 500; display: block; margin-bottom: 4px;">Transactions Indexées</span>
+                <strong style="font-size: 2rem; color: hsl(var(--text-dark)); font-family: var(--font-sans); font-weight: 700;">
+                  {(totalRevenue / 1000000).toFixed(2)} M€
+                </strong>
+              </div>
+              <div style="background-color: rgba(222, 158, 142, 0.08); color: hsl(var(--accent-rose)); padding: 12px; border-radius: 12px;">
+                <svg style="width: 28px; height: 28px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Volume boxes card -->
+            <div class="premium-card" style="padding: 28px; background: white; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); text-transform: uppercase; font-weight: 500; display: block; margin-bottom: 4px;">Volume de Lots Expédiés</span>
+                <strong style="font-size: 2rem; color: hsl(var(--text-dark)); font-family: var(--font-sans); font-weight: 700;">
+                  {totalBoxes.toLocaleString('fr-FR')} lots
+                </strong>
+              </div>
+              <div style="background-color: rgba(212, 175, 55, 0.08); color: hsl(var(--accent-gold)); padding: 12px; border-radius: 12px;">
+                <svg style="width: 28px; height: 28px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Top Care list -->
+            <div class="premium-card" style="padding: 32px; background: white;">
+              <h3 class="editorial-title" style="font-size: 1.15rem; margin-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.12); padding-bottom: 12px; font-weight: 600;">
+                Top 3 des Catégories de Soins les Plus Vendues
+              </h3>
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                {topProducts.map((prod, idx) => (
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.88rem;">
+                      <span style="font-weight: 500; color: hsl(var(--text-dark));">
+                        {idx + 1}. {translateProduct(prod.product_name)}
+                      </span>
+                      <strong style="color: hsl(var(--accent-rose));">{prod.boxes.toLocaleString('fr-FR')} lots</strong>
+                    </div>
+                    <div style="height: 6px; width: 100%; background-color: rgba(28,24,23,0.04); border-radius: 3px; overflow: hidden;">
+                      <div style={`height: 100%; width: ${prod.boxes / topProducts[0].boxes * 100}%; background: linear-gradient(90deg, hsl(var(--accent-rose)), hsl(var(--accent-gold))); border-radius: 3px;`}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Market Distribution Column -->
+          <div class="premium-card" style="padding: 36px; background: white; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 class="editorial-title" style="font-size: 1.25rem; margin-bottom: 10px; font-weight: 600;">Répartition de la Demande par Pays</h3>
+              <p style="color: hsl(var(--text-muted)); font-size: 0.88rem; margin-bottom: 30px; line-height: 1.5;">
+                Analyse du volume de chiffre d'affaires consolidé en dollars convertis par marché géographique. Une visibilité stratégique indispensable à l'export.
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                {countrySales.map((c) => {
+                  const percent = (c.amount / countrySales[0].amount * 100).toFixed(0);
+                  const formattedAmount = (c.amount).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+                  
+                  return (
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.88rem;">
+                        <span style="font-weight: 600; color: hsl(var(--text-dark)); display: flex; align-items: center; gap: 8px;">
+                          {c.country === 'USA' ? '🇺🇸 États-Unis' : 
+                           c.country === 'New Zealand' ? '🇳🇿 Nouvelle-Zélande' :
+                           c.country === 'Australia' ? '🇦🇺 Australie' :
+                           c.country === 'UK' ? '🇬🇧 Royaume-Uni' :
+                           c.country === 'Canada' ? '🇨🇦 Canada' :
+                           c.country === 'India' ? '🇮🇳 Inde' : c.country}
+                        </span>
+                        <strong style="color: hsl(var(--text-dark)); font-weight: 500;">{formattedAmount}</strong>
+                      </div>
+                      <div style="height: 6px; width: 100%; background-color: rgba(28,24,23,0.04); border-radius: 3px; overflow: hidden;">
+                        <div style={`height: 100%; width: ${percent}%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 3px;`}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 16px; background-color: rgba(222, 158, 142, 0.04); border-radius: var(--radius-sm); border-left: 3px solid hsl(var(--accent-rose)); font-size: 0.8rem; color: hsl(var(--text-muted)); line-height: 1.5;">
+              <strong>Conseil B2B :</strong> En indexant vos produits sur notre plateforme, vous profitez d'une visibilité ciblée auprès de leads qualifiés dans ces 6 régions prioritaires d'achats cosmétiques.
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const container = document.getElementById('form-container');
+  
+  if (form && container) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Select elements
+      const btn = document.getElementById('submit-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Transmission en cours...';
+      }
+
+      // Gather input values
+      const nameVal = document.getElementById('contact-name').value;
+      const companyVal = document.getElementById('contact-company').value || 'Non précisé';
+      const emailVal = document.getElementById('contact-email').value;
+      const messageVal = document.getElementById('contact-message').value;
+      const subjectSelect = document.getElementById('contact-subject');
+      const subjectText = subjectSelect.options[subjectSelect.selectedIndex].text;
+
+      // Web3Forms submission payload
+      const payload = {
+        access_key: '600e28b3-1f9b-4c75-81ad-eb6159dc26aa',
+        name: nameVal,
+        email: emailVal,
+        company: companyVal,
+        subject: `123Maquillage - [${subjectText}] de ${nameVal}`,
+        message: `Demande de : ${nameVal}\nE-mail : ${emailVal}\nSociété/Marque : ${companyVal}\nObjet : ${subjectText}\n\nMessage :\n${messageVal}`,
+        from_name: '123Maquillage'
+      };
+
+      // Perform real POST request
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(async (response) => {
+        const json = await response.json();
+        if (response.status === 200) {
+          // Success animation transition
+          container.style.opacity = '0';
+          container.style.transition = 'opacity 0.4s ease';
+          
+          setTimeout(() => {
+            container.innerHTML = `
+              <div style="text-align: center; padding: 40px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;">
+                <div style="background-color: rgba(22, 163, 74, 0.08); color: #16a34a; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+                  <svg style="width: 32px; height: 32px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 class="editorial-title" style="font-size: 1.8rem; color: hsl(var(--text-dark));">Demande transmise avec succès !</h2>
+                <p style="color: hsl(var(--text-muted)); font-size: 0.95rem; line-height: 1.6; max-w: 360px;">
+                  Merci <strong>${nameVal}</strong> pour votre intérêt. Votre dossier de demande pour <em>"${subjectText}"</em> a bien été reçu. Notre responsable de publication l'étudiera avec la plus grande attention. Un e-mail de confirmation vient de vous être envoyé.
+                </p>
+                <a href="/" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">
+                  Retour à l'accueil
+                </a>
+              </div>
+            `;
+            container.style.opacity = '1';
+          }, 400);
+        } else {
+          // Handle API error
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Réessayer l\'envoi';
+          }
+          alert(json.message || "Une erreur est survenue lors de l'envoi de votre message.");
+        }
+      })
+      .catch((error) => {
+        console.error("Web3Forms submission error:", error);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Réessayer l\'envoi';
+        }
+        alert("Une erreur de connexion est survenue. Veuillez vérifier votre réseau.");
+      });
+    });
+  }
+</script>
+
+<style>
+  input:focus, select:focus, textarea:focus {
+    border-color: hsl(var(--accent-rose)) !important;
+    background-color: white !important;
+    box-shadow: 0 0 0 3px rgba(222, 158, 142, 0.15);
+    outline: none;
+  }
+  
+  select {
+    cursor: pointer;
+  }
+
+  @keyframes scaleUp {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>

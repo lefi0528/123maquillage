@@ -1,0 +1,593 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  schema?: Record<string, any>;
+}
+
+const { 
+  title = "123Maquillage - Diagnostic & Guide de Soins de la Peau", 
+  description = "Découvrez notre comparateur de soins intelligent, faites votre diagnostic de peau gratuit et trouvez les produits cosmétiques idéaux pour votre type de peau.",
+  schema
+} = Astro.props;
+
+// Dynamically generate canonical URL and absolute social sharing image paths
+const canonicalURL = new URL(Astro.url.pathname, 'https://123maquillage.com').toString();
+const ogImageURL = new URL('/images/og-image.jpg', 'https://123maquillage.com').toString();
+
+// Generate fallback schemas if not provided by the page
+let finalSchema = schema;
+if (!finalSchema) {
+  if (Astro.url.pathname === '/') {
+    finalSchema = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "123Maquillage",
+      "url": "https://123maquillage.com/",
+      "description": "Votre guide de soin dermatologique personnalisé par l'analyse d'avis réels de passionnés de beauté.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://123maquillage.com/api/search.json?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    };
+  } else {
+    finalSchema = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": title,
+      "description": description,
+      "url": canonicalURL
+    };
+  }
+}
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" href="/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content={Astro.generator} />
+  <meta name="theme-color" content="#FAF8F5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  
+  <!-- Primary Meta Tags -->
+  <title>{title}</title>
+  <meta name="title" content={title} />
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalURL} />
+  <meta name="robots" content="index, follow" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonicalURL} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={ogImageURL} />
+  <meta property="og:site_name" content="123Maquillage" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content={canonicalURL} />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImageURL} />
+  <meta name="twitter:site" content="@123maquillage" />
+
+  <!-- JSON-LD Structured Data Schema -->
+  {finalSchema && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(finalSchema)} />
+  )}
+</head>
+<body>
+  
+  <!-- Glassmorphic Premium Header -->
+  <header class="glass-header">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 80px;">
+      
+      <!-- Logo -->
+      <a href="/" style="display: flex; align-items: center; gap: 4px;">
+        <span class="editorial-title" style="font-size: 1.6rem; letter-spacing: -0.02em;">
+          123<span class="text-rose">maquillage</span><span class="text-gold" style="font-family: var(--font-sans); font-size: 1.2rem; font-weight: 500;">.com</span>
+        </span>
+      </a>
+
+      <!-- Navigation links -->
+      <nav class="desktop-nav" style="display: flex; align-items: center; gap: 24px; font-weight: 500;">
+        <a href="/" class="nav-link">Accueil</a>
+        <a href="/diagnostic" class="nav-link text-rose" style="font-weight: 600;">Diagnostic de Peau</a>
+        <a href="/#ingredients" class="nav-link">Ingrédients</a>
+        <a href="/#marques" class="nav-link">Marques</a>
+        <a href="/contact" class="nav-link">Contact</a>
+      </nav>
+
+      <!-- Instant Search Bar -->
+      <div style="position: relative; max-width: 320px; width: 100%;">
+        <div style="display: flex; align-items: center; background: rgba(28, 24, 23, 0.04); border: 1px solid rgba(212, 175, 55, 0.1); padding: 8px 16px; border-radius: var(--radius-md); transition: var(--transition-fast);" class="search-box">
+          <svg style="width: 18px; height: 18px; color: hsl(var(--text-muted)); margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input type="text" id="global-search" placeholder="Rechercher un soin, ingrédient..." style="width: 100%; font-size: 0.9rem;" autocomplete="off" />
+        </div>
+        
+        <!-- Search Results Dropdown Overlay -->
+        <div id="search-results" class="search-dropdown"></div>
+      </div>
+      
+    </div>
+  </header>
+
+  <!-- Main Content Slot -->
+  <main style="min-height: calc(100vh - 360px);">
+    <slot />
+  </main>
+
+  <!-- Premium Editorial Footer -->
+  <footer style="background-color: hsl(var(--text-dark)); color: hsl(var(--bg-primary)); padding: 80px 0 40px 0; margin-top: 120px; border-top: 3px solid hsl(var(--accent-gold));">
+    <div class="container">
+      
+      <div class="grid-cols-4" style="margin-bottom: 60px;">
+        <!-- Brand identity -->
+        <div>
+          <span class="editorial-title" style="font-size: 1.6rem; color: white; margin-bottom: 16px; display: inline-block;">
+            123<span class="text-rose" style="filter: brightness(1.2);">maquillage</span>
+          </span>
+          <p style="color: rgba(253, 251, 247, 0.6); font-size: 0.9rem; margin-bottom: 24px;">
+            Votre guide de soin dermatologique personnalisé par l'analyse d'avis réels de passionnés de beauté.
+          </p>
+        </div>
+        
+        <!-- Navigation Column -->
+        <div>
+          <h4 class="editorial-title" style="font-size: 1.1rem; color: white; margin-bottom: 20px; letter-spacing: 0.05em; font-weight: 500;">EXPLORER</h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem;">
+            <li><a href="/" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Accueil</a></li>
+            <li><a href="/diagnostic" style="color: hsl(var(--accent-rose)); font-weight: 500;" class="foot-link">Diagnostic de Peau</a></li>
+            <li><a href="/#ingredients" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Ingrédients Clés</a></li>
+            <li><a href="/contact" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Contact &amp; Partenariats</a></li>
+          </ul>
+        </div>
+
+        <!-- Editorial Ingredients Column -->
+        <div>
+          <h4 class="editorial-title" style="font-size: 1.1rem; color: white; margin-bottom: 20px; letter-spacing: 0.05em; font-weight: 500;">INGRÉDIENTS STARS</h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem;">
+            <li><a href="/ingredients/acide-hyaluronique" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Acide Hyaluronique</a></li>
+            <li><a href="/ingredients/retinol" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Rétinol</a></li>
+            <li><a href="/ingredients/niacinamide" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Niacinamide</a></li>
+            <li><a href="/ingredients/vitamine-c" style="color: rgba(253, 251, 247, 0.75);" class="foot-link">Vitamine C</a></li>
+          </ul>
+        </div>
+
+        <!-- Science & Compliance Column -->
+        <div>
+          <h4 class="editorial-title" style="font-size: 1.1rem; color: white; margin-bottom: 20px; letter-spacing: 0.05em; font-weight: 500;">SCIENCE DU SOIN</h4>
+          <p style="color: rgba(253, 251, 247, 0.5); font-size: 0.85rem; line-height: 1.6;">
+            Les statistiques présentées sur ce site proviennent d'analyses sémantiques agrégées à partir de plus de 285 000 témoignages de consommateurs. Nous trions les soins par pertinence éco-dermatologique.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Divider -->
+      <div style="border-top: 1px solid rgba(253, 251, 247, 0.1); padding-top: 30px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <span style="font-size: 0.85rem; color: rgba(253, 251, 247, 0.4);">
+          &copy; {new Date().getFullYear()} 123maquillage.com. Tous droits réservés.
+        </span>
+        <span style="font-size: 0.85rem; color: rgba(253, 251, 247, 0.4); display: flex; gap: 16px;">
+          <a href="/politique-de-confidentialite" class="foot-link">Politique de Confidentialité</a>
+          <a href="/mentions-legales" class="foot-link">Mentions Légales</a>
+        </span>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Instant Search Script -->
+  <script>
+    const searchInput = document.getElementById('global-search');
+    const searchResults = document.getElementById('search-results');
+    
+    if (searchInput && searchResults) {
+      searchInput.addEventListener('input', async (e) => {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+          searchResults.style.display = 'none';
+          searchResults.innerHTML = '';
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/search.json?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+
+          if (data && data.results && data.results.length > 0) {
+            searchResults.style.display = 'block';
+            searchResults.innerHTML = data.results.map(p => `
+              <a href="/produits/${p.slug}" class="search-result-item">
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-weight: 500; color: #1C1817; font-size: 0.95rem;">${p.product_name}</span>
+                  <span style="font-size: 0.8rem; color: #7A7270;">${p.brand_name} · <span style="color: #D4AF37;">★ ${p.rating.toFixed(1)}</span></span>
+                </div>
+              </a>
+            `).join('');
+          } else {
+            searchResults.style.display = 'block';
+            searchResults.innerHTML = `
+              <div style="padding: 16px; text-align: center; color: #7A7270; font-size: 0.9rem;">
+                Aucun résultat pour "${query}"
+              </div>
+            `;
+          }
+        } catch (err) {
+          console.error("Error during instant search:", err);
+        }
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+          searchResults.style.display = 'none';
+        }
+      });
+    }
+  </script>
+
+  <style>
+    .nav-link {
+      color: hsl(var(--text-dark));
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      padding: 6px 0;
+      position: relative;
+    }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: hsl(var(--accent-rose));
+      transition: var(--transition-fast);
+    }
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .foot-link {
+      transition: var(--transition-fast);
+    }
+    .foot-link:hover {
+      color: hsl(var(--accent-rose)) !important;
+      padding-left: 4px;
+    }
+
+    .search-dropdown {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 0;
+      width: 100%;
+      background: white;
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 150;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .search-result-item {
+      display: block;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+      transition: var(--transition-fast);
+    }
+    .search-result-item:hover {
+      background-color: rgba(222, 158, 142, 0.05);
+      padding-left: 20px;
+    }
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-box:focus-within {
+      background: white !important;
+      border-color: hsl(var(--accent-rose)) !important;
+      box-shadow: 0 0 0 3px rgba(222, 158, 142, 0.15);
+    }
+
+    /* Premium Newsletter Modal Styles */
+    .newsletter-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(28, 24, 23, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .newsletter-modal-card {
+      background: linear-gradient(135deg, #FAF8F5 0%, #F5EFEC 100%);
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 40px rgba(28, 24, 23, 0.15);
+      max-width: 480px;
+      width: 100%;
+      padding: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .newsletter-modal-card::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(222, 158, 142, 0.2) 0%, rgba(253, 251, 247, 0) 70%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(28, 24, 23, 0.04);
+      border: none;
+      color: hsl(var(--text-muted));
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+      z-index: 10;
+    }
+    
+    .close-modal-btn:hover {
+      background: rgba(28, 24, 23, 0.08);
+      color: hsl(var(--text-dark));
+      transform: rotate(90deg);
+    }
+    
+    .newsletter-content {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .newsletter-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: hsl(var(--accent-rose));
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    
+    .newsletter-title {
+      font-size: 2.2rem;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    
+    .newsletter-desc {
+      color: hsl(var(--text-muted));
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    
+    .newsletter-form-block {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .newsletter-form-block input[type="email"] {
+      width: 100%;
+      background: white;
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      color: hsl(var(--text-dark));
+      transition: var(--transition-fast);
+      outline: none;
+      text-align: center;
+    }
+    
+    .newsletter-form-block input[type="email"]:focus {
+      border-color: hsl(var(--accent-rose));
+      box-shadow: 0 0 0 3px rgba(222, 158, 142, 0.15);
+    }
+    
+    .btn-full {
+      width: 100%;
+      justify-content: center;
+      padding: 14px;
+    }
+    
+    .newsletter-privacy {
+      font-size: 0.72rem;
+      color: hsl(var(--text-muted));
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+    
+    .newsletter-success-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+    }
+    
+    .success-icon {
+      width: 48px;
+      height: 48px;
+      color: #16a34a;
+      margin-bottom: 12px;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .animate-slide-up {
+      animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+
+  <!-- Premium Newsletter Capture Modal (Pillar 3 & E-E-A-T Lead Generation) -->
+  <div id="newsletter-modal" class="newsletter-overlay">
+    <div class="newsletter-modal-card animate-slide-up">
+      <!-- Close Button -->
+      <button id="close-newsletter" class="close-modal-btn" aria-label="Fermer la fenêtre">
+        <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      
+      <!-- Content -->
+      <div class="newsletter-content">
+        <span class="newsletter-tag">LE CLUB PRIVÉ</span>
+        <h3 class="editorial-title newsletter-title">
+          Votre routine idéale, <br/>
+          <span class="editorial-italic text-rose">révélée</span>.
+        </h3>
+        <p class="newsletter-desc">
+          Rejoignez plus de 15 000 passionnés de dermo-cosmétique. Recevez nos analyses d'actifs déchiffrées, nos conseils anti-âge exclusifs et bénéficiez de notre guide d'achat confidentiel.
+        </p>
+        
+        <!-- Form -->
+        <form id="newsletter-form" class="newsletter-form-block">
+          <div style="width: 100%;">
+            <input type="email" id="newsletter-email" placeholder="Votre adresse e-mail" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">
+            Rejoindre le Club
+          </button>
+        </form>
+        
+        <!-- Success State -->
+        <div id="newsletter-success" class="newsletter-success-state" style="display: none;">
+          <svg class="success-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span style="font-weight: 600; color: hsl(var(--text-dark));">Bienvenue dans le Club !</span>
+          <p style="font-size: 0.85rem; color: hsl(var(--text-muted)); margin-top: 4px;">Votre invitation exclusive a été envoyée.</p>
+        </div>
+        
+        <span class="newsletter-privacy">
+          🔒 Garanti 100% sans spam. Désinscription en 1 clic.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Premium Lead Gen Popup Manager (SEO & Interstitial Compliant)
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('newsletter-modal');
+      const closeBtn = document.getElementById('close-newsletter');
+      const form = document.getElementById('newsletter-form');
+      const emailInput = document.getElementById('newsletter-email');
+      const successBlock = document.getElementById('newsletter-success');
+      
+      if (!modal) return;
+      
+      // Check if user already closed or subscribed recently (within 7 days)
+      const lastDismissed = localStorage.getItem('newsletter_dismissed');
+      const now = Date.now();
+      const oneWeek = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+      
+      if (lastDismissed && (now - parseInt(lastDismissed) < oneWeek)) {
+        return; // Skip showing
+      }
+      
+      // Delay launch by 4 seconds (Google Interstitial Penalty Protection)
+      setTimeout(() => {
+        modal.style.display = 'flex';
+      }, 4000);
+      
+      // Close Modal logic
+      const dismissModal = () => {
+        modal.style.display = 'none';
+        localStorage.setItem('newsletter_dismissed', Date.now().toString());
+      };
+      
+      closeBtn.addEventListener('click', dismissModal);
+      
+      // Close on clicking overlay background
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          dismissModal();
+        }
+      });
+      
+      // Form submission (POST to SQLite database via /api/subscribe.json)
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+        if (email) {
+          try {
+            const response = await fetch('/api/subscribe.json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email })
+            });
+            const result = await response.json();
+            
+            if (response.ok) {
+              // Hide form & show beautiful success state
+              form.style.display = 'none';
+              successBlock.style.display = 'flex';
+              
+              // Mark as permanently subscribed (set 100 years expiration)
+              localStorage.setItem('newsletter_dismissed', (now + 100 * 365 * 24 * 60 * 60 * 1000).toString());
+              
+              // Close modal gracefully after 2.5 seconds
+              setTimeout(() => {
+                modal.style.display = 'none';
+              }, 2500);
+            } else {
+              alert(result.error || "Une erreur est survenue.");
+            }
+          } catch (err) {
+            console.error("Subscription error:", err);
+            alert("Une erreur de connexion est survenue. Veuillez réessayer.");
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
