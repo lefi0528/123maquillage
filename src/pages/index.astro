@@ -51,12 +51,12 @@ const slugify = (text) => {
 };
 
 const activeIngredientsList = [
-  { name: "Acide Hyaluronique", slug: "acide-hyaluronique", desc: "Le secret de l'hydratation profonde, retient jusqu'à 1000 fois son poids en eau.", tag: "Hydratation", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/acide-hyaluronique" },
-  { name: "Rétinol", slug: "retinol", desc: "L'actif anti-âge de référence qui stimule le renouvellement cellulaire.", tag: "Anti-Âge", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/retinol" },
-  { name: "Niacinamide", slug: "niacinamide", desc: "Apaise les rougeurs, resserre les pores et illumine le teint.", tag: "Anti-Imperfections", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/niacinamide" },
-  { name: "Vitamine C", slug: "vitamine-c", desc: "Un puissant antioxydant pour un coup d'éclat immédiat et anti-taches.", tag: "Éclat", scientificUrl: "https://www.loreal-paris.fr/ingredients/vitamine-c" },
-  { name: "Acide Salicylique", slug: "acide-salicylique", desc: "Exfolie en profondeur et élimine les points noirs pour purifier la peau.", tag: "Imperfections", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/acide-salicylique" },
-  { name: "Céramides", slug: "ceramides", desc: "Le ciment cellulaire protecteur indispensable pour restaurer la barrière cutanée.", tag: "Barrière Cutanée", scientificUrl: "https://www.cerave.fr/les-ingredients-cerave/les-ceramides" }
+  { name: "Acide Hyaluronique", slug: "acide-hyaluronique", desc: "Le secret de l'hydratation profonde, retient jusqu'à 1000 fois son poids en eau.", tag: "Hydratation" },
+  { name: "Rétinol", slug: "retinol", desc: "L'actif anti-âge de référence qui stimule le renouvellement cellulaire.", tag: "Anti-Âge" },
+  { name: "Niacinamide", slug: "niacinamide", desc: "Apaise les rougeurs, resserre les pores et illumine le teint.", tag: "Anti-Imperfections" },
+  { name: "Vitamine C", slug: "vitamine-c", desc: "Un puissant antioxydant pour un coup d'éclat immédiat et anti-taches.", tag: "Éclat" },
+  { name: "Acide Salicylique", slug: "acide-salicylique", desc: "Exfolie en profondeur et élimine les points noirs pour purifier la peau.", tag: "Imperfections" },
+  { name: "Céramides", slug: "ceramides", desc: "Le ciment cellulaire protecteur indispensable pour restaurer la barrière cutanée.", tag: "Barrière Cutanée" }
 ];
 ---
 
@@ -258,17 +258,6 @@ const activeIngredientsList = [
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </a>
-              {item.scientificUrl && (
-                <a 
-                  href={item.scientificUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer nofollow" 
-                  style="color: hsl(var(--text-muted)); font-weight: 500; font-size: 0.8rem; text-decoration: underline;"
-                  class="scientific-link"
-                >
-                  Source Scientifique ↗
-                </a>
-              )}
             </div>
           </div>
         ))}
