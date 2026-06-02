@@ -46,6 +46,19 @@ if (!finalSchema) {
     };
   }
 }
+
+// Format as modern, valid @graph if it is an array of schemas
+let formattedSchema = finalSchema;
+if (Array.isArray(finalSchema)) {
+  formattedSchema = {
+    "@context": "https://schema.org",
+    "@graph": finalSchema.map(s => {
+      // Remove @context inside individual graph items to avoid repetition
+      const { "@context": _, ...rest } = s;
+      return rest;
+    })
+  };
+}
 ---
 
 <!DOCTYPE html>
@@ -83,25 +96,36 @@ if (!finalSchema) {
   <meta name="twitter:site" content="@123maquillage" />
 
   <!-- JSON-LD Structured Data Schema -->
-  {finalSchema && (
-    <script type="application/ld+json" is:inline set:html={JSON.stringify(finalSchema)} />
+  {formattedSchema && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(formattedSchema)} />
   )}
 </head>
 <body>
   
   <!-- Glassmorphic Premium Header -->
   <header class="glass-header">
-    <div class="container" style="display: flex; align-items: center; justify-content: space-between; height: 80px;">
+    <div class="container header-container">
       
       <!-- Logo -->
-      <a href="/" style="display: flex; align-items: center; gap: 4px;">
-        <span class="editorial-title" style="font-size: 1.6rem; letter-spacing: -0.02em;">
-          123<span class="text-rose">maquillage</span><span class="text-gold" style="font-family: var(--font-sans); font-size: 1.2rem; font-weight: 500;">.com</span>
+      <a href="/" class="logo-link">
+        <svg class="logo-makeup-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128" style="width: 28px; height: 28px; flex-shrink: 0; margin-right: 4px;">
+          <path d="M 32 16 Q 32 26 22 26 Q 32 26 32 36 Q 32 26 42 26 Z" fill="hsl(var(--accent-gold))" />
+          <path d="M 96 36 Q 96 42 90 42 Q 96 42 96 48 Q 96 42 102 42 Z" fill="hsl(var(--accent-gold))" />
+          <circle cx="86" cy="22" r="3" fill="hsl(var(--accent-rose))" />
+          <rect x="48" y="74" width="32" height="38" rx="4" fill="currentColor" />
+          <rect x="48" y="88" width="32" height="5" fill="hsl(var(--accent-gold))" />
+          <rect x="52" y="58" width="24" height="16" rx="2" fill="hsl(var(--accent-gold))" />
+          <path d="M 54 58 L 54 36 L 64 30 L 64 58 Z" fill="hsl(var(--accent-rose))" fill-opacity="0.8" />
+          <path d="M 64 58 L 64 30 L 74 24 L 74 58 Z" fill="hsl(var(--accent-rose))" />
+          <path d="M 58 54 L 58 39" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+        </svg>
+        <span class="editorial-title logo-text">
+          123<span class="text-rose">maquillage</span><span class="text-gold logo-domain">.com</span>
         </span>
       </a>
 
-      <!-- Navigation links -->
-      <nav class="desktop-nav" style="display: flex; align-items: center; gap: 24px; font-weight: 500;">
+      <!-- Navigation links (Desktop only) -->
+      <nav class="desktop-nav">
         <a href="/" class="nav-link">Accueil</a>
         <a href="/diagnostic" class="nav-link text-rose" style="font-weight: 600;">Diagnostic de Peau</a>
         <a href="/#ingredients" class="nav-link">Ingrédients</a>
@@ -109,21 +133,90 @@ if (!finalSchema) {
         <a href="/contact" class="nav-link">Contact</a>
       </nav>
 
-      <!-- Instant Search Bar -->
-      <div style="position: relative; max-width: 320px; width: 100%;">
-        <div style="display: flex; align-items: center; background: rgba(28, 24, 23, 0.04); border: 1px solid rgba(212, 175, 55, 0.1); padding: 8px 16px; border-radius: var(--radius-md); transition: var(--transition-fast);" class="search-box">
-          <svg style="width: 18px; height: 18px; color: hsl(var(--text-muted)); margin-right: 8px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <!-- Right Actions (Search & Mobile Toggle) -->
+      <div class="header-actions">
+        <!-- Search Button (Mobile toggle) -->
+        <button id="mobile-search-toggle" class="header-action-btn mobile-only" aria-label="Rechercher">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input type="text" id="global-search" placeholder="Rechercher un soin, ingrédient..." style="width: 100%; font-size: 0.9rem;" autocomplete="off" />
+        </button>
+
+        <!-- Search Bar Container (Desktop only) -->
+        <div class="search-bar-wrapper">
+          <div class="search-box">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text" id="global-search" placeholder="Rechercher un soin, ingrédient..." autocomplete="off" />
+          </div>
+          
+          <!-- Search Results Dropdown Overlay -->
+          <div id="search-results" class="search-dropdown"></div>
         </div>
-        
-        <!-- Search Results Dropdown Overlay -->
-        <div id="search-results" class="search-dropdown"></div>
+
+        <!-- Hamburger Button (Mobile only) -->
+        <button id="mobile-menu-toggle" class="header-action-btn mobile-only" aria-label="Menu">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
       </div>
       
     </div>
+
+    <!-- Mobile Slide-Down Search Bar -->
+    <div id="mobile-search-bar" class="mobile-search-panel">
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" id="mobile-global-search" placeholder="Rechercher un soin, ingrédient..." autocomplete="off" />
+      </div>
+      <div id="mobile-search-results" class="search-dropdown"></div>
+    </div>
   </header>
+
+  <!-- Mobile Slide-Over Navigation Drawer -->
+  <div id="mobile-menu-drawer" class="mobile-drawer-overlay">
+    <div class="mobile-drawer-card">
+      <button id="close-mobile-menu" class="close-drawer-btn" aria-label="Fermer le menu">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      
+      <div class="mobile-drawer-content">
+        <div>
+          <span class="drawer-brand" style="display: flex; align-items: center; gap: 8px;">
+            <svg class="logo-makeup-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128" style="width: 28px; height: 28px; flex-shrink: 0;">
+              <path d="M 32 16 Q 32 26 22 26 Q 32 26 32 36 Q 32 26 42 26 Z" fill="hsl(var(--accent-gold))" />
+              <path d="M 96 36 Q 96 42 90 42 Q 96 42 96 48 Q 96 42 102 42 Z" fill="hsl(var(--accent-gold))" />
+              <circle cx="86" cy="22" r="3" fill="hsl(var(--accent-rose))" />
+              <rect x="48" y="74" width="32" height="38" rx="4" fill="currentColor" />
+              <rect x="48" y="88" width="32" height="5" fill="hsl(var(--accent-gold))" />
+              <rect x="52" y="58" width="24" height="16" rx="2" fill="hsl(var(--accent-gold))" />
+              <path d="M 54 58 L 54 36 L 64 30 L 64 58 Z" fill="hsl(var(--accent-rose))" fill-opacity="0.8" />
+              <path d="M 64 58 L 64 30 L 74 24 L 74 58 Z" fill="hsl(var(--accent-rose))" />
+              <path d="M 58 54 L 58 39" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+            </svg>
+            123<span class="text-rose">maquillage</span>
+          </span>
+          <nav class="mobile-nav-links">
+            <a href="/" class="mobile-nav-link">Accueil</a>
+            <a href="/diagnostic" class="mobile-nav-link text-rose" style="font-weight: 600;">Diagnostic de Peau</a>
+            <a href="/#ingredients" class="mobile-nav-link">Ingrédients Clés</a>
+            <a href="/#marques" class="mobile-nav-link">Marques Stars</a>
+            <a href="/contact" class="mobile-nav-link">Contact &amp; Avis</a>
+          </nav>
+        </div>
+        <div class="drawer-footer">
+          <p>© {new Date().getFullYear()} 123maquillage.com</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Main Content Slot -->
   <main style="min-height: calc(100vh - 360px);">
@@ -137,7 +230,18 @@ if (!finalSchema) {
       <div class="grid-cols-4" style="margin-bottom: 60px;">
         <!-- Brand identity -->
         <div>
-          <span class="editorial-title" style="font-size: 1.6rem; color: white; margin-bottom: 16px; display: inline-block;">
+          <span class="editorial-title" style="font-size: 1.6rem; color: white; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <svg class="logo-makeup-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128" style="width: 28px; height: 28px; flex-shrink: 0;">
+              <path d="M 32 16 Q 32 26 22 26 Q 32 26 32 36 Q 32 26 42 26 Z" fill="hsl(var(--accent-gold))" />
+              <path d="M 96 36 Q 96 42 90 42 Q 96 42 96 48 Q 96 42 102 42 Z" fill="hsl(var(--accent-gold))" />
+              <circle cx="86" cy="22" r="3" fill="hsl(var(--accent-rose))" />
+              <rect x="48" y="74" width="32" height="38" rx="4" fill="currentColor" />
+              <rect x="48" y="88" width="32" height="5" fill="hsl(var(--accent-gold))" />
+              <rect x="52" y="58" width="24" height="16" rx="2" fill="hsl(var(--accent-gold))" />
+              <path d="M 54 58 L 54 36 L 64 30 L 64 58 Z" fill="hsl(var(--accent-rose))" fill-opacity="0.8" />
+              <path d="M 64 58 L 64 30 L 74 24 L 74 58 Z" fill="hsl(var(--accent-rose))" />
+              <path d="M 58 54 L 58 39" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+            </svg>
             123<span class="text-rose" style="filter: brightness(1.2);">maquillage</span>
           </span>
           <p style="color: rgba(253, 251, 247, 0.6); font-size: 0.9rem; margin-bottom: 24px;">
@@ -190,55 +294,103 @@ if (!finalSchema) {
     </div>
   </footer>
 
-  <!-- Instant Search Script -->
+  <!-- Responsive Nav & Search Script -->
   <script>
-    const searchInput = document.getElementById('global-search');
-    const searchResults = document.getElementById('search-results');
-    
-    if (searchInput && searchResults) {
-      searchInput.addEventListener('input', async (e) => {
-        const query = e.target.value.trim();
-        if (query.length < 2) {
-          searchResults.style.display = 'none';
-          searchResults.innerHTML = '';
-          return;
-        }
-
-        try {
-          const res = await fetch(`/api/search.json?q=${encodeURIComponent(query)}`);
-          const data = await res.json();
-
-          if (data && data.results && data.results.length > 0) {
-            searchResults.style.display = 'block';
-            searchResults.innerHTML = data.results.map(p => `
-              <a href="/produits/${p.slug}" class="search-result-item">
-                <div style="display: flex; flex-direction: column;">
-                  <span style="font-weight: 500; color: #1C1817; font-size: 0.95rem;">${p.product_name}</span>
-                  <span style="font-size: 0.8rem; color: #7A7270;">${p.brand_name} · <span style="color: #D4AF37;">★ ${p.rating.toFixed(1)}</span></span>
-                </div>
-              </a>
-            `).join('');
-          } else {
-            searchResults.style.display = 'block';
-            searchResults.innerHTML = `
-              <div style="padding: 16px; text-align: center; color: #7A7270; font-size: 0.9rem;">
-                Aucun résultat pour "${query}"
-              </div>
-            `;
+    // Universal Instant Search Helper
+    async function initSearch(inputId, resultsId) {
+      const searchInput = document.getElementById(inputId);
+      const searchResults = document.getElementById(resultsId);
+      
+      if (searchInput && searchResults) {
+        searchInput.addEventListener('input', async (e) => {
+          const query = e.target.value.trim();
+          if (query.length < 2) {
+            searchResults.style.display = 'none';
+            searchResults.innerHTML = '';
+            return;
           }
-        } catch (err) {
-          console.error("Error during instant search:", err);
+
+          try {
+            const res = await fetch(`/api/search.json?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            if (data && data.results && data.results.length > 0) {
+              searchResults.style.display = 'block';
+              searchResults.innerHTML = data.results.map(p => `
+                <a href="/produits/${p.slug}" class="search-result-item">
+                  <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 500; color: #1C1817; font-size: 0.95rem;">${p.product_name}</span>
+                    <span style="font-size: 0.8rem; color: #7A7270;">${p.brand_name} · <span style="color: #D4AF37;">★ ${p.rating.toFixed(1)}</span></span>
+                  </div>
+                </a>
+              `).join('');
+            } else {
+              searchResults.style.display = 'block';
+              searchResults.innerHTML = `
+                <div style="padding: 16px; text-align: center; color: #7A7270; font-size: 0.9rem;">
+                  Aucun résultat pour "${query}"
+                </div>
+              `;
+            }
+          } catch (err) {
+            console.error("Error during instant search:", err);
+          }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+          }
+        });
+      }
+    }
+
+    // Initialize both search bars
+    initSearch('global-search', 'search-results');
+    initSearch('mobile-global-search', 'mobile-search-results');
+
+    // Mobile Toggle Handlers
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenuDrawer = document.getElementById('mobile-menu-drawer');
+    const closeMobileMenu = document.getElementById('close-mobile-menu');
+    
+    if (mobileMenuToggle && mobileMenuDrawer && closeMobileMenu) {
+      mobileMenuToggle.addEventListener('click', () => {
+        mobileMenuDrawer.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Lock background scroll
+      });
+      
+      const closeDrawer = () => {
+        mobileMenuDrawer.style.display = 'none';
+        document.body.style.overflow = '';
+      };
+      
+      closeMobileMenu.addEventListener('click', closeDrawer);
+      mobileMenuDrawer.addEventListener('click', (e) => {
+        if (e.target === mobileMenuDrawer) {
+          closeDrawer();
         }
       });
+    }
 
-      // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-          searchResults.style.display = 'none';
+    const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+    const mobileSearchBar = document.getElementById('mobile-search-bar');
+    
+    if (mobileSearchToggle && mobileSearchBar) {
+      mobileSearchToggle.addEventListener('click', () => {
+        const isHidden = getComputedStyle(mobileSearchBar).display === 'none';
+        if (isHidden) {
+          mobileSearchBar.style.display = 'block';
+          const input = document.getElementById('mobile-global-search');
+          if (input) input.focus();
+        } else {
+          mobileSearchBar.style.display = 'none';
         }
       });
     }
   </script>
+
 
   <style>
     .nav-link {
@@ -464,7 +616,268 @@ if (!finalSchema) {
     .animate-slide-up {
       animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+
+    /* Responsive Header Styles */
+    .header-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 80px;
+    }
+    
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .logo-text {
+      font-size: 1.6rem;
+      letter-spacing: -0.02em;
+    }
+    
+    .logo-domain {
+      font-family: var(--font-sans);
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+    
+    .desktop-nav {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-weight: 500;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .search-bar-wrapper {
+      position: relative;
+      max-width: 320px;
+      width: 100%;
+    }
+    
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(28, 24, 23, 0.04);
+      border: 1px solid rgba(212, 175, 55, 0.1);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      transition: var(--transition-fast);
+      width: 100%;
+    }
+    
+    .search-icon {
+      width: 18px;
+      height: 18px;
+      color: hsl(var(--text-muted));
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .search-box input {
+      width: 100%;
+      font-size: 0.9rem;
+      border: none;
+      background: none;
+      outline: none;
+      color: hsl(var(--text-dark));
+    }
+    
+    .header-action-btn {
+      background: rgba(28, 24, 23, 0.04);
+      border: none;
+      color: hsl(var(--text-dark));
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+    
+    .header-action-btn:hover {
+      background: rgba(28, 24, 23, 0.08);
+      color: hsl(var(--accent-rose));
+    }
+    
+    .header-action-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .mobile-only {
+      display: none;
+    }
+    
+    .mobile-search-panel {
+      display: none;
+      background: rgba(253, 251, 247, 0.98);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+      padding: 12px 16px;
+      position: absolute;
+      top: 80px;
+      left: 0;
+      width: 100%;
+      z-index: 99;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    /* Mobile Drawer Overlay */
+    .mobile-drawer-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(28, 24, 23, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 3000;
+      justify-content: flex-end;
+    }
+    
+    .mobile-drawer-card {
+      background: linear-gradient(135deg, #FAF8F5 0%, #F5EFEC 100%);
+      width: 80%;
+      max-width: 320px;
+      height: 100%;
+      box-shadow: -10px 0 30px rgba(28, 24, 23, 0.15);
+      padding: 40px 24px;
+      position: relative;
+      animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    @keyframes slideInLeft {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    
+    .close-drawer-btn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(28, 24, 23, 0.04);
+      border: none;
+      color: hsl(var(--text-muted));
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+    
+    .close-drawer-btn:hover {
+      background: rgba(28, 24, 23, 0.08);
+      color: hsl(var(--text-dark));
+      transform: rotate(90deg);
+    }
+    
+    .mobile-drawer-content {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    
+    .drawer-brand {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 48px;
+      display: block;
+    }
+    
+    .mobile-nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    
+    .mobile-nav-link {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: hsl(var(--text-dark));
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+    }
+    
+    .drawer-footer {
+      font-size: 0.8rem;
+      color: hsl(var(--text-muted));
+    }
+
+    /* Media query for screens < 768px */
+    @media (max-width: 768px) {
+      .desktop-nav {
+        display: none !important;
+      }
+      
+      .search-bar-wrapper {
+        display: none !important;
+      }
+      
+      .mobile-only {
+        display: flex !important;
+      }
+      
+      .logo-text {
+        font-size: 1.25rem;
+      }
+      
+      .logo-domain {
+        font-size: 1rem;
+      }
+      
+      .header-container {
+        height: 70px;
+        padding: 0 16px;
+      }
+      
+      .mobile-search-panel {
+        top: 70px;
+      }
+    }
+
+    /* Media query for newsletter subscription modal */
+    @media (max-width: 480px) {
+      .newsletter-modal-card {
+        padding: 32px 20px !important;
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 0 auto;
+        box-sizing: border-box !important;
+      }
+      
+      .newsletter-title {
+        font-size: 1.6rem !important;
+      }
+      
+      .newsletter-desc {
+        font-size: 0.82rem !important;
+        margin-bottom: 20px !important;
+        line-height: 1.5 !important;
+      }
+      
+      .close-modal-btn {
+        top: 16px !important;
+        right: 16px !important;
+        width: 32px !important;
+        height: 32px !important;
+      }
+    }
   </style>
+
 
   <!-- Premium Newsletter Capture Modal (Pillar 3 & E-E-A-T Lead Generation) -->
   <div id="newsletter-modal" class="newsletter-overlay">
