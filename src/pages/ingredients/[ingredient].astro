@@ -3,73 +3,118 @@ import Layout from '../../layouts/Layout.astro';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { SHOW_PRICES } from '../../config.js';
+
 export async function getStaticPaths() {
   const ingredients = [
     { 
       name: "Rétinol", 
       slug: "retinol", 
       activeName: "retinol", 
-      desc: "Le rétinol est l'actif anti-âge absolu de référence en dermatologie. Dérivé de la vitamine A, il stimule la production naturelle de collagène et d'élastine, accélère la régénération des cellules de l'épiderme et aide à lisser rides, ridules et imperfections pour un grain de peau affiné." 
+      desc: "Le rétinol est l'actif anti-âge absolu de référence en dermatologie. Dérivé de la vitamine A, il stimule la production naturelle de collagène et d'élastine, accélère la régénération des cellules de l'épiderme et aide à lisser rides, ridules et imperfections pour un grain de peau affiné.",
+      faqs: [
+        { q: "Quels sont les effets du Rétinol sur la peau ?", a: "Le Rétinol stimule le renouvellement cellulaire et la production de collagène. Il réduit visiblement les rides, raffermit l'épiderme, estompe les taches pigmentaires et affine le grain de peau." },
+        { q: "Comment appliquer le Rétinol en toute sécurité ?", a: "Appliquez-le le soir sur une peau propre et sèche. Débutez par 2 applications par semaine pour habituer la peau, puis augmentez la fréquence. Appliquez obligatoirement une crème solaire SPF 30 ou 50 le lendemain matin." }
+      ]
     },
     { 
       name: "Acide Hyaluronique", 
       slug: "acide-hyaluronique", 
       activeName: "acide hyaluronique", 
-      desc: "L'acide hyaluronique est une molécule naturellement présente dans notre peau, réputée pour son pouvoir hydratant hors du commun : elle peut retenir jusqu'à 1000 fois son propre poids en eau. C'est l'actif par excellence pour repulper la peau, lisser les ridules de déshydratation et restaurer le confort." 
+      desc: "L'acide hyaluronique est une molécule naturellement présente dans notre peau, réputée pour son pouvoir hydratant hors du commun : elle peut retenir jusqu'à 1000 fois son propre poids en eau. C'est l'actif par excellence pour repulper la peau, lisser les ridules de déshydratation et restaurer le confort.",
+      faqs: [
+        { q: "Pourquoi utiliser de l'acide hyaluronique ?", a: "Il hydrate la peau en profondeur en retenant jusqu'à 1000 fois son poids en eau. Il repulpe l'épiderme, atténue les ridules de déshydratation et convient à tous les types de peau." },
+        { q: "Quand et comment l'appliquer ?", a: "Appliquez-le matin et soir sur une peau légèrement humide (après votre lotion ou tonique). Scellez immédiatement l'hydratation en appliquant votre crème hydratante habituelle." }
+      ]
     },
     { 
       name: "Niacinamide", 
       slug: "niacinamide", 
       activeName: "niacinamide", 
-      desc: "Aussi appelée vitamine B3, la Niacinamide est un actif polyvalent adoré de tous les types de peau. Elle renforce la barrière cutanée, resserre visiblement les pores dilatés, régule la production de sébum, calme l'inflammation et estompe les taches pour un teint parfaitement uniforme." 
+      desc: "Aussi appelée vitamine B3, la Niacinamide est un actif polyvalent adoré de tous les types de peau. Elle renforce la barrière cutanée, resserre visiblement les pores dilatés, régule la production de sébum, calme l'inflammation et estompe les taches pour un teint parfaitement uniforme.",
+      faqs: [
+        { q: "Quels sont les bienfaits de la Niacinamide ?", a: "Aussi appelée Vitamine B3, elle apaise les rougeurs et inflammations, resserre les pores dilatés, régule la production de sébum et estompe les taches cutanées." },
+        { q: "Peut-on l'associer à d'autres actifs ?", a: "Oui, la Niacinamide est un actif très stable. Elle s'associe idéalement avec l'acide hyaluronique pour hydrater, ou avec le rétinol et l'acide salicylique pour calmer les irritations." }
+      ]
     },
     { 
       name: "Vitamine C", 
       slug: "vitamine-c", 
       activeName: "vitamine c", 
-      desc: "La vitamine C est l'antioxydant le plus puissant utilisé en cosmétique. Elle combat les radicaux libres responsables du vieillissement cutané, stimule l'éclat de la peau en inhibant la mélanine (effet anti-taches), et booste la production de collagène pour une peau plus ferme." 
+      desc: "La vitamine C est l'antioxydant le plus puissant utilisé en cosmétique. Elle combat les radicaux libres responsables du vieillissement cutané, stimule l'éclat de la peau en inhibant la mélanine (effet anti-taches), et booste la production de collagène pour une peau plus ferme.",
+      faqs: [
+        { q: "Pourquoi appliquer de la Vitamine C le matin ?", a: "C'est un puissant antioxydant qui neutralise les radicaux libres dus aux UV et à la pollution. Elle illumine le teint terne, stimule le collagène et prévient le vieillissement cutané." },
+        { q: "Comment conserver un sérum à la Vitamine C ?", a: "La Vitamine C pure (acide L-ascorbique) est très sensible à l'air et à la lumière. Conservez votre flacon à l'abri de la lumière, de la chaleur, et refermez-le bien après chaque utilisation." }
+      ]
     },
     { 
       name: "Acide Salicylique", 
       slug: "acide-salicylique", 
       activeName: "acide salicylique", 
-      desc: "L'acide salicylique est un acide bêta-hydroxylé (BHA) liposoluble. Cette propriété lui permet de pénétrer profondément à l'intérieur du sébum des pores pour les désincruster, éliminer les cellules mortes et les points noirs, et réguler les éruptions d'acné." 
+      desc: "L'acide salicylique est un acide bêta-hydroxylé (BHA) liposoluble. Cette propriété lui permet de pénétrer profondément à l'intérieur du sébum des pores pour les désincruster, éliminer les cellules mortes et les points noirs, et réguler les éruptions d'acné.",
+      faqs: [
+        { q: "Comment agit l'Acide Salicylique sur l'acné ?", a: "En tant que BHA liposoluble, il pénètre à l'intérieur des pores pour dissoudre l'excès de sébum, exfolier les cellules mortes et désincruster les points noirs afin de réduire les imperfections." },
+        { q: "À quelle fréquence l'utiliser ?", a: "Utilisez-le 1 fois par jour (de préférence le soir) ou 2 à 3 fois par semaine si votre peau est sensible. Hydratez bien votre peau après l'application." }
+      ]
     },
     { 
       name: "Acide Glycolique", 
       slug: "acide-glycolique", 
       activeName: "acide glycolique", 
-      desc: "L'acide glycolique est le plus petit des acides alpha-hydroxylés (AHA). Sa structure lui confère une excellente pénétration en surface pour éliminer les peaux mortes, accélérer l'éclat du teint, réduire l'apparence des cicatrices d'acné et lisser le grain de peau." 
+      desc: "L'acide glycolique est le plus petit des acides alpha-hydroxylés (AHA). Sa structure lui confère une excellente pénétration en surface pour éliminer les peaux mortes, accélérer l'éclat du teint, réduire l'apparence des cicatrices d'acné et lisser le grain de peau.",
+      faqs: [
+        { q: "Quel est le rôle de l'Acide Glycolique ?", a: "Cet AHA élimine les cellules mortes à la surface de l'épiderme. Il booste l'éclat du teint, lisse les ridules et améliore la texture de la peau grâce à son effet peeling doux." },
+        { q: "Peut-il irriter la peau ?", a: "Oui, en raison de sa petite taille moléculaire, il pénètre rapidement et peut picoter. Il est conseillé de l'utiliser le soir, de commencer doucement et d'appliquer un SPF le lendemain." }
+      ]
     },
     { 
       name: "Céramides", 
       slug: "ceramides", 
       activeName: "ceramides", 
-      desc: "Les céramides sont des lipides (acides gras) naturellement présents dans notre épiderme, constituant environ 50% de la barrière cutanée. Ils agissent comme un 'ciment' cellulaire, essentiel pour retenir l'hydratation et protéger la peau des agressions extérieures." 
+      desc: "Les céramides sont des lipides (acides gras) naturellement présents dans notre épiderme, constituant environ 50% de la barrière cutanée. Ils agissent comme un 'ciment' cellulaire, essentiel pour retenir l'hydratation et protéger la peau des agressions extérieures.",
+      faqs: [
+        { q: "Quel est le rôle des Céramides dans la barrière cutanée ?", a: "Les Céramides sont des acides gras qui cimentent les cellules de la peau. Ils empêchent l'eau de s'évaporer (perte insensible en eau) et protègent l'épiderme des agressions extérieures." },
+        { q: "Pour quels types de peau sont-ils recommandés ?", a: "Ils sont indispensables pour les peaux sèches, déshydratées, sensibles ou sujettes à l'eczéma, afin de restaurer le confort et de réparer la barrière cutanée." }
+      ]
     },
     { 
       name: "Squalane", 
       slug: "squalane", 
       activeName: "squalane", 
-      desc: "Le squalane est un émollient exceptionnel dérivé du squalène. Très stable, léger et non comédogène, il mime le sébum naturel de la peau pour sceller l'hydratation en profondeur sans boucher les pores, convenant même aux peaux à imperfections." 
+      desc: "Le squalane est un émollient exceptionnel dérivé du squalène. Très stable, léger et non comédogène, il mime le sébum naturel de la peau pour sceller l'hydratation en profondeur sans boucher les pores, convenant même aux peaux à imperfections.",
+      faqs: [
+        { q: "Quelle est la différence entre Squalène et Squalane ?", a: "Le squalène est produit naturellement par notre peau mais s'oxyde vite. Le squalane est sa forme hydrogénée stable. C'est un excellent émollient non comédogène qui adoucit sans boucher les pores." },
+        { q: "Le Squalane convient-il aux peaux grasses ?", a: "Oui ! Sa texture légère et fluide mime le sébum naturel sans laisser de film gras, ce qui en fait un excellent hydratant pour les peaux mixtes à grasses." }
+      ]
     },
     {
       name: "Acide Lactique",
       slug: "acide-lactique",
       activeName: "acide lactique",
-      desc: "L'acide lactique est un acide alpha-hydroxylé (AHA) doux, principalement issu de la fermentation des sucres. Il exfolie en douceur la surface de la peau tout en favorisant son hydratation naturelle. C'est l'actif idéal des peaux sensibles pour raviver l'éclat, unifier le teint et atténuer les ridules."
+      desc: "L'acide lactique est un acide alpha-hydroxylé (AHA) doux, principalement issu de la fermentation des sucres. Il exfolie en douceur la surface de la peau tout en favorisant son hydratation naturelle. C'est l'actif idéal des peaux sensibles pour raviver l'éclat, unifier le teint et atténuer les ridules.",
+      faqs: [
+        { q: "Pourquoi préférer l'Acide Lactique aux autres AHA ?", a: "Plus doux que l'acide glycolique en raison de sa plus grande taille moléculaire, il exfolie la peau sans l'irriter tout en agissant comme un humectant pour retenir l'hydratation." },
+        { q: "Comment l'utiliser pour raviver l'éclat ?", a: "Appliquez-le le soir après le nettoyage, sous forme de sérum ou de lotion exfoliante douce, suivi de votre crème hydratante." }
+      ]
     },
     {
       name: "Centella Asiatica",
       slug: "centella-asiatica",
       activeName: "centella asiatica",
-      desc: "Aussi appelée l'Herbe du Tigre, la Centella Asiatica est une plante médicinale légendaire aux vertus apaisantes, anti-inflammatoires et cicatrisantes exceptionnelles. Elle répare en profondeur les barrières cutanées lésées ou sensibilisées et stimule la synthèse de collagène."
+      desc: "Aussi appelée l'Herbe du Tigre, la Centella Asiatica est une plante médicinale légendaire aux vertus apaisantes, anti-inflammatoires et cicatrisantes exceptionnelles. Elle répare en profondeur les barrières cutanées lésées ou sensibilisées et stimule la synthèse de collagène.",
+      faqs: [
+        { q: "Pourquoi la Centella Asiatica apaise-t-elle la peau ?", a: "Riche en madécassoside, elle possède des propriétés anti-inflammatoires puissantes qui calment immédiatement les sensations de brûlure, les rougeurs et accélèrent la cicatrisation cutanée." },
+        { q: "Quand l'intégrer dans sa routine ?", a: "Elle s'utilise matin et soir, particulièrement après des traitements irritants (comme le rétinol ou les acides exfoliants) ou lorsque la peau est sensibilisée ou agressée par le froid." }
+      ]
     },
     {
       name: "Huile d'Arbre à Thé",
       slug: "huile-darbre-a-the",
       activeName: "huile d'arbre a the",
-      desc: "L'huile d'arbre à thé (Tea Tree Oil) est l'actif purifiant naturel de référence pour les peaux sujettes aux imperfections. Grâce à ses vertus antibactériennes majeures, elle purifie l'épiderme en profondeur, aide à réguler la production de sébum et atténue visiblement les boutons."
+      desc: "L'huile d'arbre à thé (Tea Tree Oil) est l'actif purifiant naturel de référence pour les peaux sujettes aux imperfections. Grâce à ses vertus antibactériennes majeures, elle purifie l'épiderme en profondeur, aide à réguler la production de sébum et atténue visiblement les boutons.",
+      faqs: [
+        { q: "Comment l'Huile d'Arbre à Thé combat-elle les imperfections ?", a: "Grâce à ses propriétés antibactériennes et assainissantes naturelles, elle cible les bactéries responsables de l'acné, purifie les pores et aide à assécher rapidement les boutons." },
+        { q: "Comment l'appliquer correctement ?", a: "Appliquez-la localement sur les imperfections à l'aide d'un coton-tige, ou diluée dans votre crème hydratante. Évitez de l'appliquer pure sur l'ensemble du visage." }
+      ]
     }
   ];
 
@@ -90,13 +135,17 @@ const products = db.prepare("SELECT * FROM products WHERE active_ingredients LIK
 
 db.close();
 
-// Premium schemas for active ingredient page (Pillar 2)
+// Premium schemas for active ingredient page (Pillar 2 + Voice Search Speakable)
 const ingredientSchema = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   "name": `${ing.name} en Cosmétique - Bienfaits & Meilleurs Soins - 123Maquillage`,
   "description": `Découvrez les vertus dermatologiques de l'actif ${ing.name} et notre sélection des meilleurs cosmétiques formulés avec cet ingrédient.`,
-  "url": `https://123maquillage.com/ingredients/${ingredient}`
+  "url": `https://123maquillage.com/ingredients/${ingredient}`,
+  "speakable": {
+    "@type": "SpeakableSpecification",
+    "cssSelector": [".speakable-title", ".speakable-summary"]
+  }
 };
 
 const breadcrumbSchema = {
@@ -117,12 +166,30 @@ const breadcrumbSchema = {
     }
   ]
 };
+
+// Generate FAQPage schema dynamically for voice search
+let pageSchemas = [ingredientSchema, breadcrumbSchema];
+if (ing.faqs) {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": ing.faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.q,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.a
+      }
+    }))
+  };
+  pageSchemas.push(faqSchema);
+}
 ---
 
 <Layout 
   title={`${ing.name} en Cosmétique - Bienfaits & Meilleurs Soins - 123Maquillage`}
   description={`Découvrez les vertus dermatologiques de l'actif ${ing.name} et notre sélection des meilleurs cosmétiques formulés avec cet ingrédient.`}
-  schema={[ingredientSchema, breadcrumbSchema]}
+  schema={pageSchemas}
 >
   <div style="padding: 60px 0 100px 0;">
     <div class="container">
@@ -140,10 +207,10 @@ const breadcrumbSchema = {
         <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.15em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 12px;">
           Actif Dermatologique Majeur
         </span>
-        <h1 class="editorial-title" style="font-size: 3rem; margin-bottom: 20px;">
+        <h1 class="editorial-title speakable-title" style="font-size: 3rem; margin-bottom: 20px;">
           {ing.name}
         </h1>
-        <p style="color: hsl(var(--text-dark)); font-size: 1.12rem; line-height: 1.8; max-width: 720px; font-family: var(--font-sans);">
+        <p class="speakable-summary" style="color: hsl(var(--text-dark)); font-size: 1.12rem; line-height: 1.8; max-width: 720px; font-family: var(--font-sans);">
           {ing.desc}
         </p>
       </div>
@@ -159,7 +226,7 @@ const breadcrumbSchema = {
       </div>
 
       <!-- Products Grid -->
-      <div class="grid-cols-4">
+      <div class="grid-cols-4" style="margin-bottom: 60px;">
         {products.map(p => (
           <div class="premium-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 360px;">
             <div>
@@ -198,6 +265,39 @@ const breadcrumbSchema = {
           </div>
         ))}
       </div>
+
+      <!-- FAQ Section (Voice Search Optimization) -->
+      {ing.faqs && (
+        <div style="margin-top: 80px; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 60px;">
+          <div style="margin-bottom: 40px;">
+            <span style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; color: hsl(var(--accent-rose)); text-transform: uppercase; display: block; margin-bottom: 8px;">
+              Informations &amp; Conseils
+            </span>
+            <h2 class="editorial-title" style="font-size: 2rem; margin-bottom: 12px;">
+              Questions fréquentes <span class="editorial-italic text-rose">sur le {ing.name}</span>
+            </h2>
+            <p style="color: hsl(var(--text-muted)); font-size: 1rem;">
+              Retrouvez nos réponses claires et concises aux questions les plus posées sur l'application de cet actif.
+            </p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 24px; max-width: 800px;">
+            {ing.faqs.map(faq => (
+              <div class="premium-card" style="padding: 32px;">
+                <h3 class="editorial-title" style="font-size: 1.3rem; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start; line-height: 1.4;">
+                  <span style="color: hsl(var(--accent-gold)); font-weight: 600; font-family: var(--font-serif);">Q.</span>
+                  {faq.q}
+                </h3>
+                <div style="border-left: 2px solid rgba(222, 158, 142, 0.25); padding-left: 20px; margin-left: 8px; margin-top: 16px;">
+                  <p style="color: hsl(var(--text-dark)); font-size: 0.98rem; line-height: 1.7;">
+                    {faq.a}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   </div>
