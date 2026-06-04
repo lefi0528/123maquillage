@@ -252,7 +252,7 @@ const breadcrumbSchema = {
             {highlightsList.length > 0 && (
               <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px;">
                 {highlightsList.map(h => (
-                  <span style="font-size: 0.75rem; background-color: white; border: 1px solid rgba(212, 175, 55, 0.15); color: hsl(var(--text-dark)); padding: 4px 12px; border-radius: 20px; font-weight: 500;">
+                  <span style="font-size: 0.75rem; background-color: var(--glass-bg); border: 1px solid rgba(212, 175, 55, 0.15); color: hsl(var(--text-dark)); padding: 4px 12px; border-radius: 20px; font-weight: 500;">
                     {h}
                   </span>
                 ))}
@@ -365,7 +365,7 @@ const breadcrumbSchema = {
               </h4>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 {activeIngredientsList.map(act => (
-                  <a href={`/ingredients/${slugify(act)}`} style="font-size: 0.8rem; background-color: white; border: 1px solid rgba(212,175,55,0.25); color: hsl(var(--accent-gold)); padding: 4px 14px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: var(--transition-fast);" class="ing-badge">
+                  <a href={`/ingredients/${slugify(act)}`} style="font-size: 0.8rem; background-color: var(--glass-bg); border: 1px solid rgba(212,175,55,0.25); color: hsl(var(--accent-gold)); padding: 4px 14px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: var(--transition-fast);" class="ing-badge">
                     {act.charAt(0).toUpperCase() + act.slice(1)}
                     <svg style="width: 12px; height: 12px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -378,7 +378,7 @@ const breadcrumbSchema = {
 
           {parsedIngredients.length > 0 ? (
             <>
-              <div style="overflow-x: auto; border: 1px solid rgba(212, 175, 55, 0.12); border-radius: var(--radius-md); background: white; margin-top: 24px; box-shadow: var(--shadow-sm);">
+              <div style="overflow-x: auto; border: 1px solid rgba(212, 175, 55, 0.12); border-radius: var(--radius-md); background: var(--glass-bg); margin-top: 24px; box-shadow: var(--shadow-sm);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
                   <thead>
                     <tr style="background-color: rgba(222, 158, 142, 0.04); border-bottom: 1px solid rgba(212, 175, 55, 0.12);">
