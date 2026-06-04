@@ -354,6 +354,14 @@ function translateProduct(name) {
       .then(async (response) => {
         const json = await response.json();
         if (response.status === 200) {
+          // Track Form Submission Success
+          if (typeof window.trackEvent === 'function') {
+            window.trackEvent('form_submission', {
+              form_name: 'contact_b2b',
+              subject: subjectText
+            });
+          }
+
           // Success animation transition
           container.style.opacity = '0';
           container.style.transition = 'opacity 0.4s ease';

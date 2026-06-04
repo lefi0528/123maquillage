@@ -295,6 +295,20 @@ if (skin && concern) {
         </div>
       )}
 
+      {hasSubmitted && (
+        <script is:inline define:vars={{ skin, concern, maxPrice }}>
+          document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.trackEvent === 'function') {
+              window.trackEvent('quiz_complete', {
+                skin_type: skin,
+                concern: concern,
+                budget: maxPrice
+              });
+            }
+          });
+        </script>
+      )}
+
     </div>
   </div>
 </Layout>

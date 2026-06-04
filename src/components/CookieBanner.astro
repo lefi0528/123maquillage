@@ -1,0 +1,138 @@
+---
+// src/components/CookieBanner.astro
+---
+
+<div id="cookie-banner" class="cookie-banner premium-card" style="display: none;">
+  <div class="cookie-content">
+    <div class="cookie-icon" style="background-color: rgba(212, 175, 55, 0.08); color: hsl(var(--accent-gold)); padding: 12px; border-radius: 50%;">
+      <svg style="width: 24px; height: 24px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    </div>
+    <div class="cookie-text">
+      <h3 class="editorial-title" style="font-size: 1.1rem; margin-bottom: 6px;">Votre vie privée est importante</h3>
+      <p style="font-size: 0.85rem; color: hsl(var(--text-muted)); line-height: 1.5;">
+        Nous utilisons des cookies pour améliorer votre expérience, analyser notre trafic et vous proposer des contenus personnalisés. Conformément au RGPD, vous avez le contrôle sur vos données.
+      </p>
+    </div>
+  </div>
+  <div class="cookie-actions">
+    <button id="cookie-reject" class="btn btn-secondary" style="padding: 10px 16px; font-size: 0.85rem;">Continuer sans accepter</button>
+    <button id="cookie-accept" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.85rem;">Accepter tout</button>
+  </div>
+</div>
+
+<style>
+  .cookie-banner {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .cookie-banner.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .cookie-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .cookie-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .cookie-banner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      bottom: 32px;
+      left: 50%;
+      right: auto;
+      width: 100%;
+      max-width: 800px;
+      transform: translate(-50%, 100px);
+    }
+
+    .cookie-banner.show {
+      transform: translate(-50%, 0);
+    }
+
+    .cookie-actions {
+      width: auto;
+      flex-shrink: 0;
+    }
+  }
+</style>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const banner = document.getElementById('cookie-banner');
+    const acceptBtn = document.getElementById('cookie-accept');
+    const rejectBtn = document.getElementById('cookie-reject');
+
+    // Check if user has already made a choice
+    const consent = localStorage.getItem('cookie_consent');
+
+    if (!consent) {
+      // Show banner after a short delay
+      setTimeout(() => {
+        banner.style.display = 'flex';
+        // Trigger reflow
+        banner.offsetHeight;
+        banner.classList.add('show');
+      }, 1000);
+    } else if (consent === 'granted') {
+      // Update gtag consent
+      if (typeof gtag === 'function') {
+        gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+      }
+    }
+
+    const hideBanner = () => {
+      banner.classList.remove('show');
+      setTimeout(() => {
+        banner.style.display = 'none';
+      }, 500);
+    };
+
+    acceptBtn?.addEventListener('click', () => {
+      localStorage.setItem('cookie_consent', 'granted');
+      if (typeof gtag === 'function') {
+        gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+      }
+      hideBanner();
+    });
+
+    rejectBtn?.addEventListener('click', () => {
+      localStorage.setItem('cookie_consent', 'denied');
+      hideBanner();
+    });
+  });
+</script>

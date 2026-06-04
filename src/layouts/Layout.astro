@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import CookieBanner from '../components/CookieBanner.astro';
 
 interface Props {
   title?: string;
@@ -97,6 +98,31 @@ if (Array.isArray(finalSchema)) {
   <!-- JSON-LD Structured Data Schema -->
   {formattedSchema && (
     <script type="application/ld+json" is:inline set:html={JSON.stringify(formattedSchema)} />
+  )}
+
+  <!-- Google Analytics & Consent Mode -->
+  {import.meta.env.PUBLIC_GA_MEASUREMENT_ID && (
+    <>
+      <script is:inline>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        
+        // Default consent to denied before GA loads
+        gtag('consent', 'default', {
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied',
+          'analytics_storage': 'denied'
+        });
+      </script>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_MEASUREMENT_ID}`}></script>
+      <script is:inline define:vars={{ gaId: import.meta.env.PUBLIC_GA_MEASUREMENT_ID }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', gaId);
+      </script>
+    </>
   )}
 
   <!-- Theme Initialization (Anti-FOUC) -->
@@ -319,8 +345,19 @@ if (Array.isArray(finalSchema)) {
     </div>
   </footer>
 
+  <CookieBanner />
+
   <!-- Responsive Nav & Search Script -->
   <script>
+    // Universal Analytics Event Tracking Helper
+    window.trackEvent = function(eventName, eventParams) {
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', eventName, eventParams);
+      } else {
+        console.log(`[GA Event Mock] ${eventName}`, eventParams);
+      }
+    };
+
     // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIconSun = document.getElementById('theme-icon-sun');
