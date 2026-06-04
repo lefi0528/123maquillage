@@ -68,6 +68,17 @@ export const onRequest = defineMiddleware((context, next) => {
     return context.redirect('/', 301);
   }
 
+  // 8. Anciens articles de blog ou pages (slugs longs avec plusieurs tirets)
+  // On exclut les pages légitimes du site actuel qui ont des tirets
+  const isOldBlogPost = /^\/[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9\-]+$/i.test(pathname);
+  if (
+    isOldBlogPost &&
+    !pathname.startsWith('/politique-de-confidentialite') &&
+    !pathname.startsWith('/mentions-legales')
+  ) {
+    return context.redirect('/', 301);
+  }
+
   // Si aucune règle n'a matché, on passe à la suite (Astro gérera la route normale ou affichera la 404)
   return next();
 });
