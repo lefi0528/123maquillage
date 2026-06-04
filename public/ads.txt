@@ -1,0 +1,1 @@
+# ads.txt vide pour éviter les erreurs 404 dans la console de recherche Google
