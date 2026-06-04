@@ -101,7 +101,7 @@ if (Array.isArray(finalSchema)) {
   )}
 
   <!-- Google Analytics & Consent Mode -->
-  {import.meta.env.PUBLIC_GA_MEASUREMENT_ID && (
+  {true && (
     <>
       <script is:inline>
         window.dataLayer = window.dataLayer || [];
@@ -115,8 +115,8 @@ if (Array.isArray(finalSchema)) {
           'analytics_storage': 'denied'
         });
       </script>
-      <script async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA_MEASUREMENT_ID}`}></script>
-      <script is:inline define:vars={{ gaId: import.meta.env.PUBLIC_GA_MEASUREMENT_ID }}>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=G-5ME6Q7VHJ2`}></script>
+      <script is:inline define:vars={{ gaId: 'G-5ME6Q7VHJ2' }}>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
