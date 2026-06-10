@@ -1,0 +1,95 @@
+---
+// Cette page SSR intercepte TOUTES les URLs non reconnues par les routes existantes.
+// Elle remplace le middleware pour la gestion des 301 (bug Astro 6 : le middleware ne s'exécute pas pour les 404).
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+
+const pathname = Astro.url.pathname;
+
+// ============================================================
+// Redirection 301 — Anciens URLs PrestaShop
+// ============================================================
+
+// 1. Extensions .html (ex: /produit-12345.html, /es/maquillage/1350-...html)
+if (pathname.endsWith('.html')) {
+  return Astro.redirect('/', 301);
+}
+
+// 2. Préfixes de tags, catégories et pages système PrestaShop
+if (
+  pathname.startsWith('/tag/') ||
+  pathname.startsWith('/category/') ||
+  pathname.startsWith('/wp-content/') ||
+  pathname.startsWith('/brands') ||
+  pathname.startsWith('/confirmation-commande') ||
+  pathname.startsWith('/connexion') ||
+  pathname.startsWith('/2-accueil')
+) {
+  return Astro.redirect('/', 301);
+}
+
+// 3. Anciens préfixes de langue (/fr/, /es/, /it/, /en/, /de/)
+if (
+  pathname.startsWith('/fr/') ||
+  pathname.startsWith('/es/') ||
+  pathname.startsWith('/it/') ||
+  pathname.startsWith('/en/') ||
+  pathname.startsWith('/de/')
+) {
+  return Astro.redirect('/', 301);
+}
+
+// 4. Catégories / produits avec ID numériques (ex: /33-yeux, /15045-bronzer...)
+if (
+  /^\/[0-9]+[\-_][a-zA-Z0-9\-_]+/.test(pathname) ||
+  /\/[a-zA-Z0-9\-_]+\/[0-9]+[\-_][a-zA-Z0-9\-_]+/.test(pathname)
+) {
+  return Astro.redirect('/', 301);
+}
+
+// 5. Anciennes catégories PrestaShop sans ID
+const oldCategories = [
+  '/maquillage', '/cheveux', '/solaires', '/hygiene', '/parfums', '/homme', '/femme',
+  '/cosmetique-visage', '/soin-des-pieds', '/rouge-a-levres', '/mascara', '/crayon',
+  '/fard-a-paupieres', '/huile-de-corps', '/gel', '/concealer-correcteur', '/teint-',
+  '/pinceaux-teint', '/palette-yeux', '/rouge-matte', '/soin-anti-tache', '/hydratation',
+  '/primer-base-',
+];
+if (oldCategories.some(cat => pathname.startsWith(cat))) {
+  return Astro.redirect('/', 301);
+}
+
+// 6. /index.php (ancienne home PrestaShop)
+if (pathname === '/index.php') {
+  return Astro.redirect('/', 301);
+}
+
+// 7. Anciens articles de blog (slugs longs avec tirets, avec ou sans slash final)
+const isOldBlogPost = /^\/[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9\-]+\/?$/i.test(pathname);
+if (isOldBlogPost) {
+  return Astro.redirect('/', 301);
+}
+
+// ============================================================
+// Aucune règle PrestaShop matchée → 404 propre
+// ============================================================
+Astro.response.status = 404;
+Astro.response.statusText = 'Not Found';
+---
+
+<Layout title="Page non trouvée - 123maquillage" description="La page que vous recherchez n'existe pas ou a été déplacée.">
+  <main style="min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 1rem; text-align: center;">
+    <div style="max-width: 28rem; width: 100%;">
+      <h1 style="font-size: 3.75rem; font-weight: 700; margin-bottom: 1rem;">404</h1>
+      <p style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Oups ! Page introuvable</p>
+      <p style="margin-bottom: 2rem; color: hsl(var(--text-muted));">
+        La page que vous recherchez n'existe plus ou a été déplacée. Nous avons récemment mis à jour notre site !
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+        <a href="/" class="btn btn-primary">Retour à l'accueil</a>
+        <a href="/produits" class="btn btn-secondary">Voir nos produits</a>
+      </div>
+    </div>
+  </main>
+</Layout>
