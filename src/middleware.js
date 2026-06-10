@@ -10,6 +10,12 @@ export const onRequest = defineMiddleware((context, next) => {
     return next();
   }
 
+  // 0. Nettoyage des anciens paramètres de langue PrestaShop (?language-select=...)
+  if (url.searchParams.has('language-select')) {
+    // On retire le paramètre et on redirige proprement vers le même chemin
+    return context.redirect(pathname, 301);
+  }
+
   // --- Règles de redirection pour les anciennes URLs (301 Moved Permanently) ---
 
   // 1. Anciennes pages avec extension .html (ex: /es/maquillage/1350-stay-satin...html)
@@ -58,7 +64,12 @@ export const onRequest = defineMiddleware((context, next) => {
     return context.redirect('/', 301);
   }
 
-  // 6. Redirection du favicon.ico vers favicon.svg si demandé (puisque le site utilise un svg)
+  // 6. Redirection de /index.php (ancienne page d'accueil PrestaShop)
+  if (pathname === '/index.php') {
+    return context.redirect('/', 301);
+  }
+
+  // 7. Redirection du favicon.ico vers favicon.svg si demandé (puisque le site utilise un svg)
   if (pathname === '/favicon.ico') {
     return context.redirect('/favicon.svg', 301);
   }
@@ -68,9 +79,9 @@ export const onRequest = defineMiddleware((context, next) => {
     return context.redirect('/', 301);
   }
 
-  // 8. Anciens articles de blog ou pages (slugs longs avec plusieurs tirets)
+  // 9. Anciens articles de blog ou pages (slugs longs avec plusieurs tirets, avec ou sans slash final)
   // On exclut les pages légitimes du site actuel qui ont des tirets
-  const isOldBlogPost = /^\/[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9\-]+$/i.test(pathname);
+  const isOldBlogPost = /^\/[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9\-]+\/?$/i.test(pathname);
   if (
     isOldBlogPost &&
     !pathname.startsWith('/politique-de-confidentialite') &&
