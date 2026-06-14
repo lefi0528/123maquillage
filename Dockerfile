@@ -21,8 +21,9 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy SQLite database and the compiled Astro server build
+# Copy SQLite database, server wrapper, and the compiled Astro server build
 COPY skincare.db ./
+COPY server.mjs ./
 COPY --from=builder /app/dist ./dist
 
 # Bind server to the correct environment port required by Cloud Run
@@ -30,4 +31,4 @@ ENV HOST=0.0.0.0
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["node", "./dist/server/entry.mjs"]
+CMD ["node", "./server.mjs"]

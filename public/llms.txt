@@ -1,0 +1,18 @@
+# 123Maquillage
+
+> Encyclopédie & Diagnostique de Soins de la Peau - Guide complet des soins cosmétiques avec avis par type de peau.
+
+## À propos
+123Maquillage est un guide de soins cosmétiques indépendant qui fournit des analyses détaillées de produits de beauté basées sur des avis réels de consommateurs, organisés par type de peau (sèche, grasse, mixte, normale).
+
+## Pages principales
+- [Accueil](https://123maquillage.com/)
+- [Diagnostic de Peau](https://123maquillage.com/diagnostic)
+- [Contact](https://123maquillage.com/contact)
+
+## Contenu
+- Fiches produits avec statistiques de compatibilité par type de peau
+- Analyses de composition (ingrédients, rôle, tolérance)
+- Avis consommateurs classés par type de peau
+- Pages marques avec catalogue complet
+- Pages ingrédients avec guide encyclopédique

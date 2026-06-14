@@ -14,8 +14,12 @@ const {
   schema
 } = Astro.props;
 
-// Dynamically generate canonical URL and absolute social sharing image paths
-const canonicalURL = new URL(Astro.url.pathname, 'https://123maquillage.com').toString();
+// Dynamically generate canonical URL (stripping trailing slashes for SEO sitemap match)
+let cleanPathname = Astro.url.pathname;
+if (cleanPathname.length > 1 && cleanPathname.endsWith('/')) {
+  cleanPathname = cleanPathname.slice(0, -1);
+}
+const canonicalURL = new URL(cleanPathname, 'https://123maquillage.com').toString();
 const ogImageURL = new URL('/images/og-image.jpg', 'https://123maquillage.com').toString();
 
 // Generate fallback schemas if not provided by the page
